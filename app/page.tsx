@@ -1,3 +1,5 @@
+import SearchBar from '@/components/SearchBar';
+
 export default function Home() {
   return (
     <main
@@ -51,11 +53,16 @@ export default function Home() {
           Live data. AI-powered thesis generation.
         </p>
 
+        {/* Search */}
+        <div className="flex justify-center mb-10">
+          <SearchBar />
+        </div>
+
         {/* Roadmap pills */}
         <div className="flex flex-wrap gap-2 justify-center mb-16">
           {[
             { label: "Foundation", done: true },
-            { label: "Universal Lookup", done: false },
+            { label: "Universal Lookup", done: true },
             { label: "Core Tabs", done: false },
             { label: "Persistence", done: false },
             { label: "Automation", done: false },
