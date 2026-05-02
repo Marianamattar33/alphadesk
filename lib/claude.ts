@@ -33,9 +33,15 @@ Data:
 - 8-step projected return: ${ret >= 0 ? '+' : ''}${ret.toFixed(0)}% (based on projected NI × avg P/E)
 - Cash runway: ${a.valuation.cashRunway.months > 200 ? '>200 months (strong)' : a.valuation.cashRunway.months.toFixed(0) + ' months'} | Debt/Capital: ${a.valuation.cashRunway.debtToCapital.toFixed(1)}%
 
-Write two investment theses:
-<structural>3-4 sentences. Long-term structural case. End with one invalidation condition.</structural>
-<tactical>3-4 sentences. Current entry setup using the 7 Principles. What would confirm or kill the trade.</tactical>`;
+Write two investment theses. Wrap each one in its XML tag exactly as shown:
+
+<structural>
+[3-4 sentences on the long-term (3-10yr) structural case. End with one key invalidation condition.]
+</structural>
+
+<tactical>
+[3-4 sentences on the current entry setup using the 7 Principles. State what would confirm or kill the trade.]
+</tactical>`;
 }
 
 function extractTag(text: string, tag: string): string {
@@ -55,22 +61,30 @@ export async function generateThesis(
 
   const client = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY });
 
-  const response = await client.messages.create({
-    model: 'claude-haiku-4-5',
-    max_tokens: 700,
-    system: [
-      {
-        type: 'text',
-        text: SYSTEM_PROMPT,
-        cache_control: { type: 'ephemeral' },
-      },
-    ],
-    messages: [{ role: 'user', content: buildPrompt(analysis) }],
-  });
+  try {
+    const response = await client.messages.create({
+      model: 'claude-haiku-4-5-20251001',
+      max_tokens: 700,
+      system: [
+        {
+          type: 'text',
+          text: SYSTEM_PROMPT,
+          cache_control: { type: 'ephemeral' },
+        },
+      ],
+      messages: [{ role: 'user', content: buildPrompt(analysis) }],
+    });
 
-  const text = response.content[0].type === 'text' ? response.content[0].text : '';
-  return {
-    structural: extractTag(text, 'structural') || 'Structural thesis unavailable.',
-    tactical: extractTag(text, 'tactical') || 'Tactical thesis unavailable.',
-  };
+    const text = response.content.find(b => b.type === 'text')?.text ?? '';
+    return {
+      structural: extractTag(text, 'structural') || 'Structural thesis unavailable.',
+      tactical: extractTag(text, 'tactical') || 'Tactical thesis unavailable.',
+    };
+  } catch (err) {
+    console.error('[claude] generateThesis error:', err);
+    return {
+      structural: 'Thesis generation failed — check Vercel function logs.',
+      tactical: '',
+    };
+  }
 }
