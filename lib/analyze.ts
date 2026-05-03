@@ -13,7 +13,7 @@ import { evaluatePrinciples, computeValuation } from './abacus';
 import type { StockAnalysis } from '@/types/lookup';
 
 export async function analyzeTicker(ticker: string): Promise<StockAnalysis> {
-  const t = ticker.toUpperCase().trim();
+  const t = ticker.toUpperCase().trim().replace(/\./g, '-'); // BRK.B → BRK-B (FMP uses hyphens)
 
   const [quote, profile, history, income, balance, targets, earnings, newsRaw] =
     await Promise.all([
