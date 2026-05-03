@@ -3,6 +3,7 @@ import Link from 'next/link';
 import { ArrowLeft, TrendingUp, TrendingDown, ExternalLink, BookmarkPlus } from 'lucide-react';
 import { analyzeTicker } from '@/lib/analyze';
 import ThesisSection from './ThesisSection';
+import { InfoTip, type TipContent } from '@/components/InfoTip';
 import type { PrincipleResult, ValuationSteps } from '@/types/lookup';
 
 export const dynamic = 'force-dynamic';
@@ -67,10 +68,13 @@ function PrincipleCard({ p }: { p: PrincipleResult }) {
   );
 }
 
-function ValuationRow({ label, value, note }: { label: string; value: string; note?: string }) {
+function ValuationRow({ label, value, note, tip }: { label: string; value: string; note?: string; tip?: TipContent }) {
   return (
     <div className="flex items-baseline justify-between gap-4 py-1.5" style={{ borderBottom: '1px solid var(--border)' }}>
-      <span className="text-xs" style={{ color: 'var(--text-muted)' }}>{label}</span>
+      <span className="inline-flex items-center text-xs" style={{ color: 'var(--text-muted)' }}>
+        {label}
+        {tip && <InfoTip tip={tip} />}
+      </span>
       <span className="text-xs font-mono font-semibold text-right" style={{ color: 'var(--text)', fontFamily: 'var(--font-mono)' }}>
         {value}
         {note && <span className="ml-1 text-[10px] opacity-50">{note}</span>}
@@ -189,6 +193,16 @@ export default async function LookupPage({ params }: { params: Promise<{ ticker:
           <ValuationRow
             label="Williams %R"
             value={`${fmt(a.williamsR, 0)} (${a.williamsRTrend})`}
+            tip={{
+              title: 'Williams %R — 14-period',
+              lines: [
+                { label: 'Formula', value: '(Highest High − Close) / (Highest High − Lowest Low) × −100' },
+                { label: 'Source', value: '14-day high / low / close from FMP' },
+                { label: 'PASS', value: '≤ −90 portfolio entry  |  rising through −40 swing trigger' },
+                { label: 'CAUTION', value: '−40 to −80 neutral — watch for entry signal' },
+                { label: 'FAIL', value: '> −40 overbought — not an entry, wait for pullback' },
+              ],
+            }}
           />
           <ValuationRow
             label="Fib Golden Zone"
