@@ -3,25 +3,53 @@
 import { useState, useRef, useEffect, useCallback } from 'react';
 import { createPortal } from 'react-dom';
 
+// ─── Public types (used by page.tsx to build tip content) ───────────────────
+
+export type VerdictColor = 'green' | 'gold' | 'red';
+
 export interface TipLine {
-  label: string;
+  label: string;   // "Formula", "Source", etc.
   value: string;
+}
+
+export interface TipVerdict {
+  color: VerdictColor;
+  text: string;    // colored-dot + rule in one line
+}
+
+export interface TipCurrent {
+  text: string;           // formatted current value, e.g. "−41 (falling)"
+  verdict: VerdictColor;
+  interpretation: string; // e.g. "neutral zone, no entry yet"
 }
 
 export interface TipContent {
   title: string;
   lines: TipLine[];
+  verdicts?: TipVerdict[];
+  current?: TipCurrent;
 }
 
-// Keeps the tooltip visible while the mouse travels from the button into it
-const HIDE_DELAY_MS = 120;
+// ─── Internal constants ──────────────────────────────────────────────────────
+
+const DOT: Record<VerdictColor, string> = {
+  green: '#34d399',
+  gold:  '#d4a656',
+  red:   '#f87171',
+};
+
+const HIDE_DELAY = 130; // ms — keeps tooltip alive while mouse travels button→card
+
+// ─── Component ───────────────────────────────────────────────────────────────
 
 export function InfoTip({ tip }: { tip: TipContent }) {
-  const [open, setOpen] = useState(false);
-  const [pos, setPos] = useState({ top: 0, left: 0 });
+  const [open, setOpen]     = useState(false);
   const [mounted, setMounted] = useState(false);
-  const btnRef = useRef<HTMLButtonElement>(null);
-  const hideTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const [pos, setPos]       = useState({ top: 0, left: 0, arrowLeft: '50%', w: 360 });
+
+  const btnRef     = useRef<HTMLButtonElement>(null);
+  const cardRef    = useRef<HTMLDivElement>(null);
+  const hideTimer  = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   useEffect(() => { setMounted(true); }, []);
 
@@ -31,32 +59,35 @@ export function InfoTip({ tip }: { tip: TipContent }) {
 
   const scheduleHide = useCallback(() => {
     cancelHide();
-    hideTimer.current = setTimeout(() => setOpen(false), HIDE_DELAY_MS);
+    hideTimer.current = setTimeout(() => setOpen(false), HIDE_DELAY);
   }, [cancelHide]);
 
   const show = useCallback(() => {
     cancelHide();
     if (!btnRef.current) return;
-    const r = btnRef.current.getBoundingClientRect();
-    // Position: centered above the button, clamped to viewport
-    const tooltipW = 288;
-    const rawLeft = r.left + r.width / 2;
-    const clampedLeft = Math.min(
-      Math.max(rawLeft, tooltipW / 2 + 8),
-      window.innerWidth - tooltipW / 2 - 8
-    );
-    setPos({ top: r.top + window.scrollY - 8, left: clampedLeft });
+    const r   = btnRef.current.getBoundingClientRect();
+    const w   = window.innerWidth < 640 ? 280 : 360;
+    const btnX = r.left + r.width / 2;
+    // Clamp so tooltip doesn't bleed off screen edges
+    const clampedLeft = Math.min(Math.max(btnX, w / 2 + 12), window.innerWidth - w / 2 - 12);
+    // Arrow offset: where the point sits relative to tooltip's left edge (as %)
+    const arrowPct = ((btnX - (clampedLeft - w / 2)) / w * 100).toFixed(1);
+    setPos({
+      top:       r.bottom + 8,          // below the icon for now — flipped in render
+      left:      clampedLeft,
+      arrowLeft: `${arrowPct}%`,
+      w,
+    });
     setOpen(true);
   }, [cancelHide]);
 
-  // Close on outside click/tap
+  // Close on outside tap/click
   useEffect(() => {
     if (!open) return;
     function onOutside(e: MouseEvent | TouchEvent) {
       const t = e.target as Node;
       if (btnRef.current?.contains(t)) return;
-      const tip = document.getElementById('infotip-portal');
-      if (tip?.contains(t)) return;
+      if (cardRef.current?.contains(t)) return;
       setOpen(false);
     }
     document.addEventListener('mousedown', onOutside);
@@ -67,23 +98,18 @@ export function InfoTip({ tip }: { tip: TipContent }) {
     };
   }, [open]);
 
-  // Cleanup timer on unmount
   useEffect(() => () => { if (hideTimer.current) clearTimeout(hideTimer.current); }, []);
 
-  function toggle(e: React.MouseEvent) {
+  const toggle = useCallback((e: React.MouseEvent) => {
     e.stopPropagation();
-    if (open) { setOpen(false); } else { show(); }
-  }
+    open ? setOpen(false) : show();
+  }, [open, show]);
 
-  const LABEL_COLORS: Record<string, string> = {
-    PASS: '#34d399',
-    CAUTION: '#fb923c',
-    FAIL: '#f87171',
-    MANUAL: '#a78bfa',
-  };
+  const hasVerdicts = tip.verdicts && tip.verdicts.length > 0;
 
   return (
     <>
+      {/* ⓘ trigger */}
       <button
         ref={btnRef}
         type="button"
@@ -91,53 +117,167 @@ export function InfoTip({ tip }: { tip: TipContent }) {
         onClick={toggle}
         onMouseEnter={show}
         onMouseLeave={scheduleHide}
-        className="inline-flex items-center align-middle ml-1 transition-opacity hover:opacity-100"
-        style={{ opacity: 0.35, color: 'var(--gold)', fontSize: '11px', lineHeight: 1, flexShrink: 0 }}
+        style={{
+          display: 'inline-flex',
+          alignItems: 'center',
+          marginLeft: '5px',
+          verticalAlign: 'middle',
+          opacity: 0.35,
+          color: 'var(--gold)',
+          fontSize: '11px',
+          lineHeight: 1,
+          flexShrink: 0,
+          background: 'none',
+          border: 'none',
+          padding: 0,
+          cursor: 'pointer',
+          transition: 'opacity 0.15s',
+        }}
       >
         ⓘ
       </button>
 
+      {/* Tooltip portal */}
       {mounted && open && createPortal(
         <div
-          id="infotip-portal"
           onMouseEnter={cancelHide}
           onMouseLeave={scheduleHide}
           style={{
-            position: 'absolute',
-            top: pos.top,
+            position: 'fixed',
+            // pos.top is r.bottom + 8; we flip to above by using transform
+            top:  pos.top,
             left: pos.left,
-            transform: 'translate(-50%, -100%)',
-            width: '288px',
+            // Move up by full own height + the 8px gap we added, so it sits above the button
+            transform: `translate(-50%, calc(-100% - 16px))`,
+            width: `${pos.w}px`,
             zIndex: 9999,
-            background: '#0d1220',
-            border: '1px solid rgba(212,166,86,0.25)',
-            borderRadius: '12px',
-            padding: '12px 14px',
-            boxShadow: '0 12px 40px rgba(0,0,0,0.6)',
             pointerEvents: 'auto',
           }}
         >
-          <p style={{ color: 'var(--gold)', fontSize: '11px', fontWeight: 700, letterSpacing: '0.05em', textTransform: 'uppercase', marginBottom: '8px' }}>
-            {tip.title}
-          </p>
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
-            {tip.lines.map((line, i) => (
-              <div key={i} style={{ display: 'flex', gap: '6px', fontSize: '11px', lineHeight: '1.5' }}>
-                <span style={{
-                  color: LABEL_COLORS[line.label] ?? 'rgba(212,166,86,0.6)',
-                  fontWeight: 600,
-                  whiteSpace: 'nowrap',
-                  flexShrink: 0,
-                  minWidth: '52px',
-                }}>
-                  {line.label}
-                </span>
-                <span style={{ color: 'rgba(255,255,255,0.75)' }}>{line.value}</span>
+          {/* Card */}
+          <div
+            ref={cardRef}
+            style={{
+              background:   '#0c1021',
+              border:       '1px solid rgba(212,166,86,0.22)',
+              borderRadius: '12px',
+              padding:      '11px 13px',
+              boxShadow:    '0 16px 48px rgba(0,0,0,0.7)',
+            }}
+          >
+            {/* Title */}
+            <p style={{
+              color:         'var(--gold)',
+              fontSize:      '10.5px',
+              fontWeight:    700,
+              letterSpacing: '0.07em',
+              textTransform: 'uppercase',
+              marginBottom:  '8px',
+            }}>
+              {tip.title}
+            </p>
+
+            {/* Formula / Source lines */}
+            {tip.lines.length > 0 && (
+              <div style={{
+                display:       'flex',
+                flexDirection: 'column',
+                gap:           '3px',
+                paddingBottom: (hasVerdicts || tip.current) ? '8px' : 0,
+                marginBottom:  (hasVerdicts || tip.current) ? '8px' : 0,
+                borderBottom:  (hasVerdicts || tip.current) ? '1px solid rgba(255,255,255,0.05)' : 'none',
+              }}>
+                {tip.lines.map((line, i) => (
+                  <div key={i} style={{ display: 'flex', gap: '8px', fontSize: '11px', lineHeight: '1.5' }}>
+                    <span style={{ color: 'rgba(212,166,86,0.5)', fontWeight: 600, whiteSpace: 'nowrap', flexShrink: 0, minWidth: '46px' }}>
+                      {line.label}
+                    </span>
+                    <span style={{ color: 'rgba(255,255,255,0.6)' }}>{line.value}</span>
+                  </div>
+                ))}
               </div>
-            ))}
+            )}
+
+            {/* Verdicts — colored dots */}
+            {hasVerdicts && (
+              <div style={{
+                display:       'flex',
+                flexDirection: 'column',
+                gap:           '4px',
+                paddingBottom: tip.current ? '8px' : 0,
+                marginBottom:  tip.current ? '8px' : 0,
+                borderBottom:  tip.current ? '1px solid rgba(255,255,255,0.05)' : 'none',
+              }}>
+                {tip.verdicts!.map((v, i) => (
+                  <div key={i} style={{ display: 'flex', alignItems: 'flex-start', gap: '7px', fontSize: '11px', lineHeight: '1.5' }}>
+                    <span style={{
+                      display:      'inline-block',
+                      width:        '6px',
+                      height:       '6px',
+                      borderRadius: '50%',
+                      background:   DOT[v.color],
+                      flexShrink:   0,
+                      marginTop:    '4px',
+                    }} />
+                    <span style={{ color: 'rgba(255,255,255,0.72)' }}>{v.text}</span>
+                  </div>
+                ))}
+              </div>
+            )}
+
+            {/* Current value */}
+            {tip.current && (
+              <div style={{ display: 'flex', alignItems: 'center', gap: '5px', flexWrap: 'wrap', fontSize: '11px' }}>
+                <span style={{ color: 'rgba(212,166,86,0.5)', fontWeight: 700, letterSpacing: '0.06em', textTransform: 'uppercase', fontSize: '10px' }}>
+                  Now
+                </span>
+                <span style={{
+                  display:      'inline-block',
+                  width:        '6px',
+                  height:       '6px',
+                  borderRadius: '50%',
+                  background:   DOT[tip.current.verdict],
+                  flexShrink:   0,
+                }} />
+                <span style={{ color: 'rgba(255,255,255,0.92)', fontWeight: 600 }}>
+                  {tip.current.text}
+                </span>
+                <span style={{ color: 'rgba(255,255,255,0.42)' }}>
+                  — {tip.current.interpretation}
+                </span>
+              </div>
+            )}
+          </div>
+
+          {/* Arrow pointer — downward triangle below the card */}
+          <div style={{ position: 'relative', height: '7px', marginTop: '-1px' }}>
+            {/* Outer (border colour) */}
+            <div style={{
+              position:    'absolute',
+              top:         0,
+              left:        pos.arrowLeft,
+              transform:   'translateX(-50%)',
+              width:       0,
+              height:      0,
+              borderLeft:  '7px solid transparent',
+              borderRight: '7px solid transparent',
+              borderTop:   '7px solid rgba(212,166,86,0.22)',
+            }} />
+            {/* Inner (card fill colour) */}
+            <div style={{
+              position:    'absolute',
+              top:         0,
+              left:        pos.arrowLeft,
+              transform:   'translateX(-50%)',
+              width:       0,
+              height:      0,
+              borderLeft:  '6px solid transparent',
+              borderRight: '6px solid transparent',
+              borderTop:   '6px solid #0c1021',
+            }} />
           </div>
         </div>,
-        document.body
+        document.body,
       )}
     </>
   );

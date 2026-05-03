@@ -3,10 +3,33 @@ import Link from 'next/link';
 import { ArrowLeft, TrendingUp, TrendingDown, ExternalLink, BookmarkPlus } from 'lucide-react';
 import { analyzeTicker } from '@/lib/analyze';
 import ThesisSection from './ThesisSection';
-import { InfoTip, type TipContent } from '@/components/InfoTip';
+import { InfoTip, type TipContent, type TipCurrent, type VerdictColor } from '@/components/InfoTip';
 import type { PrincipleResult, ValuationSteps } from '@/types/lookup';
 
 export const dynamic = 'force-dynamic';
+
+// ─── Tooltip current-value helpers ──────────────────────────────────────────
+
+function wrCurrent(wr: number, trend: string, crossing40: boolean): TipCurrent {
+  const text = `${wr.toFixed(0)} (${trend})`;
+  let verdict: VerdictColor;
+  let interpretation: string;
+  if (crossing40)       { verdict = 'green'; interpretation = 'crossing −40 — swing momentum trigger'; }
+  else if (wr <= -90)   { verdict = 'green'; interpretation = 'portfolio entry zone'; }
+  else if (wr <= -80)   { verdict = 'green'; interpretation = 'oversold, watch for reversal'; }
+  else if (wr <= -40)   { verdict = 'gold';  interpretation = 'neutral, no entry signal yet'; }
+  else if (wr <= -20)   { verdict = 'gold';  interpretation = 'neutral-bullish, not a trigger yet'; }
+  else                  { verdict = 'red';   interpretation = 'overbought — avoid entry'; }
+  return { text, verdict, interpretation };
+}
+
+function peCurrent(pe: number | null): TipCurrent | undefined {
+  if (pe === null) return undefined;
+  const text = `${pe.toFixed(1)}×`;
+  if (pe < 20)   return { text, verdict: 'gold',  interpretation: 'conservative (< 20)' };
+  if (pe <= 39)  return { text, verdict: 'green', interpretation: 'leader sweet spot (20–39)' };
+  return           { text, verdict: 'red',   interpretation: 'high risk (≥ 40)' };
+}
 
 // ─── Helpers ────────────────────────────────────────────────────────────────
 
@@ -197,11 +220,17 @@ export default async function LookupPage({ params }: { params: Promise<{ ticker:
               title: 'Williams %R — 14-period',
               lines: [
                 { label: 'Formula', value: '(Highest High − Close) / (Highest High − Lowest Low) × −100' },
-                { label: 'Source', value: '14-day high / low / close from FMP' },
-                { label: 'PASS', value: '≤ −90 portfolio entry  |  rising through −40 swing trigger' },
-                { label: 'CAUTION', value: '−40 to −80 neutral — watch for entry signal' },
-                { label: 'FAIL', value: '> −40 overbought — not an entry, wait for pullback' },
+                { label: 'Source',  value: '14-day high / low / close from FMP' },
               ],
+              verdicts: [
+                { color: 'green', text: '≤ −90 — portfolio entry zone' },
+                { color: 'green', text: '≤ −80 — oversold, watch for reversal' },
+                { color: 'green', text: 'Rising through −40 — swing momentum trigger' },
+                { color: 'gold',  text: '−40 to −80 (flat/falling) — neutral, wait for signal' },
+                { color: 'gold',  text: '−20 to −40 — neutral-bullish, not yet a trigger' },
+                { color: 'red',   text: '> −20 — overbought, avoid entry' },
+              ],
+              current: wrCurrent(a.williamsR, a.williamsRTrend, a.williamsRCrossing40),
             }}
           />
           <ValuationRow
@@ -275,6 +304,20 @@ export default async function LookupPage({ params }: { params: Promise<{ ticker:
           label="① P/E Ratio"
           value={v.pe.value !== null ? `${fmt(v.pe.value, 1)}x` : 'N/A'}
           note={`(${v.pe.category})`}
+          tip={{
+            title: 'P/E Ratio — Principio V',
+            lines: [
+              { label: 'Formula', value: 'Current price ÷ diluted EPS (trailing 12 months)' },
+              { label: 'Source',  value: 'FMP live price + latest annual income statement' },
+            ],
+            verdicts: [
+              { color: 'green', text: '20–39 — leader sweet spot' },
+              { color: 'gold',  text: '< 20 — conservative; possible value but slow-growth signal' },
+              { color: 'red',   text: '≥ 40 — high risk; growth expectations already priced in' },
+              { color: 'gold',  text: 'Negative EPS — not yet profitable, P/E not applicable' },
+            ],
+            current: peCurrent(v.pe.value),
+          }}
         />
         <ValuationRow
           label="② Cash Runway"
