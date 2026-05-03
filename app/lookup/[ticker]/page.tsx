@@ -242,7 +242,7 @@ export default async function LookupPage({ params }: { params: Promise<{ ticker:
         style={{ background: 'var(--bg-card)', border: '1px solid var(--border)' }}
       >
         <h2 className="text-xs font-semibold uppercase tracking-widest mb-4" style={{ color: 'var(--gold)' }}>
-          7 Principles — Abacus Framework
+          7 Principles
         </h2>
         <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3">
           {a.principles.map(p => <PrincipleCard key={p.id} p={p} />)}
@@ -255,7 +255,7 @@ export default async function LookupPage({ params }: { params: Promise<{ ticker:
         style={{ background: 'var(--bg-card)', border: '1px solid var(--border)' }}
       >
         <h2 className="text-xs font-semibold uppercase tracking-widest mb-3" style={{ color: 'var(--gold)' }}>
-          8-Step Abacus Valuation
+          8-Step Valuation
         </h2>
         <ValuationRow
           label="① P/E Ratio"

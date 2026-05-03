@@ -45,7 +45,7 @@ export default function Home() {
           style={{ color: "var(--text)" }}
         >
           Institutional intelligence,{" "}
-          <span style={{ color: "var(--gold-bright)" }}>built on Abacus</span>
+          <span style={{ color: "var(--gold-bright)" }}>built on the framework</span>
         </h1>
 
         <p className="text-base mb-10" style={{ color: "var(--text-dim)" }}>

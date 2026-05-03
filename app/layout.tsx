@@ -3,7 +3,7 @@ import "./globals.css";
 
 export const metadata: Metadata = {
   title: "AlphaDesk",
-  description: "Institutional investment intelligence — Abacus Framework",
+  description: "Institutional investment intelligence — 7 Principles, 8-Step Valuation",
 };
 
 export default function RootLayout({

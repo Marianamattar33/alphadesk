@@ -34,7 +34,7 @@ export function evaluatePrinciples(input: AbacusInput): PrincipleResult[] {
       id: 1, name: 'Price Target', nameEs: 'Precio Objetivo',
       status,
       headline: `${upside >= 0 ? '+' : ''}${upside.toFixed(1)}% upside to $${targets.targetConsensus.toFixed(0)} consensus`,
-      detail: `Range: $${targets.targetLow}–$${targets.targetHigh}. Abacus requires ≥20% upside for a strong Principio I.`,
+      detail: `Range: $${targets.targetLow}–$${targets.targetHigh}. Principio I requires ≥20% upside for a strong entry.`,
     };
   })();
 
@@ -64,7 +64,7 @@ export function evaluatePrinciples(input: AbacusInput): PrincipleResult[] {
       id: 2, name: 'Sales Growth', nameEs: 'Crecimiento en Ventas',
       status,
       headline: `${yoy >= 0 ? '+' : ''}${yoy.toFixed(1)}% YoY — ${phase} phase`,
-      detail: `Revenue: $${(latest.revenue / 1e9).toFixed(1)}B → $${(prev.revenue / 1e9).toFixed(1)}B (prior year)${cagr3yStr}. Abacus prefers Mature or Growth-Leader.`,
+      detail: `Revenue: $${(latest.revenue / 1e9).toFixed(1)}B → $${(prev.revenue / 1e9).toFixed(1)}B (prior year)${cagr3yStr}. Principio II prefers Mature or Growth-Leader phase.`,
     };
   })();
 
@@ -112,7 +112,7 @@ export function evaluatePrinciples(input: AbacusInput): PrincipleResult[] {
       id: 5, name: 'P/E Ratio', nameEs: 'Ratio P/E',
       status,
       headline: `P/E ${pe.toFixed(1)} — ${category}`,
-      detail: `Trailing P/E based on diluted EPS $${eps.toFixed(2)}. Abacus: <20 conservative, 20–39 leader sweet spot, 40+ high risk.`,
+      detail: `Trailing P/E based on diluted EPS $${eps.toFixed(2)}. Principio V: <20 conservative, 20–39 leader sweet spot, 40+ high risk.`,
     };
   })();
 
@@ -138,7 +138,7 @@ export function evaluatePrinciples(input: AbacusInput): PrincipleResult[] {
     } else if (williamsRCrossing40) {
       status = 'PASS';
       headline = `Williams %R ${williamsR.toFixed(0)} rising through -40 — Swing trigger`;
-      detail = 'Rising through -40 is the Abacus swing momentum trigger. Watch for EMA50 break and retest.';
+      detail = 'Rising through -40 is the Principio VII swing momentum trigger. Watch for EMA50 break and retest.';
     } else if (williamsR <= -80) {
       status = 'PASS';
       headline = `Williams %R ${williamsR.toFixed(0)} — Oversold, ${williamsRTrend}`;
@@ -150,7 +150,7 @@ export function evaluatePrinciples(input: AbacusInput): PrincipleResult[] {
     } else {
       status = 'FAIL';
       headline = `Williams %R ${williamsR.toFixed(0)} — Overbought`;
-      detail = 'Above -40: overbought by Abacus standards. Not an entry. Wait for a pullback toward -80 or -90.';
+      detail = 'Above -40: overbought. Not an entry by Principio VII. Wait for a pullback toward -80 or -90.';
     }
 
     return { id: 7, name: 'Williams %R', nameEs: 'Williams %R', status, headline, detail };
