@@ -93,6 +93,13 @@ export interface FMPNews {
   site: string;
 }
 
+export interface FMPSearchResult {
+  symbol: string;
+  name: string;
+  exchangeFullName: string;
+  exchangeShortName: string;
+}
+
 // ---------- Fetch functions ----------
 
 export async function fetchQuote(ticker: string): Promise<FMPQuote | null> {
@@ -132,4 +139,27 @@ export async function fetchEarnings(ticker: string): Promise<FMPEarnings[]> {
 export async function fetchNews(ticker: string, limit = 5): Promise<FMPNews[]> {
   const data = await fmpGet<FMPNews[]>(`news/stock?symbols=${ticker}&limit=${limit}`);
   return data;
+}
+
+const US_EXCHANGES = ['New York Stock Exchange', 'NASDAQ', 'NYSE'];
+
+export async function fetchSearchResults(query: string): Promise<FMPSearchResult[]> {
+  const q = encodeURIComponent(query);
+  const [byName, bySymbol] = await Promise.all([
+    fmpGet<FMPSearchResult[]>(`search-name?query=${q}&limit=20`),
+    fmpGet<FMPSearchResult[]>(`search-symbol?query=${q}&limit=20`),
+  ]);
+
+  const seen = new Set<string>();
+  const merged: FMPSearchResult[] = [];
+
+  for (const r of [...bySymbol, ...byName]) {
+    if (seen.has(r.symbol)) continue;
+    const ex = r.exchangeFullName ?? r.exchangeShortName ?? '';
+    if (!US_EXCHANGES.some(u => ex.includes(u))) continue;
+    seen.add(r.symbol);
+    merged.push(r);
+  }
+
+  return merged.slice(0, 7);
 }
