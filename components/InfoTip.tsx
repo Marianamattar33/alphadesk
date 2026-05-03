@@ -2,33 +2,11 @@
 
 import { useState, useRef, useEffect, useCallback } from 'react';
 import { createPortal } from 'react-dom';
+import type { TipContent, VerdictColor } from '@/types/tips';
 
-// ─── Public types (used by page.tsx to build tip content) ───────────────────
-
-export type VerdictColor = 'green' | 'gold' | 'red';
-
-export interface TipLine {
-  label: string;   // "Formula", "Source", etc.
-  value: string;
-}
-
-export interface TipVerdict {
-  color: VerdictColor;
-  text: string;    // colored-dot + rule in one line
-}
-
-export interface TipCurrent {
-  text: string;           // formatted current value, e.g. "−41 (falling)"
-  verdict: VerdictColor;
-  interpretation: string; // e.g. "neutral zone, no entry yet"
-}
-
-export interface TipContent {
-  title: string;
-  lines: TipLine[];
-  verdicts?: TipVerdict[];
-  current?: TipCurrent;
-}
+// Re-export types so existing imports from this module keep working
+export type { VerdictColor, TipContent };
+export type { TipLine, TipVerdict, TipCurrent } from '@/types/tips';
 
 // ─── Internal constants ──────────────────────────────────────────────────────
 
@@ -36,6 +14,7 @@ const DOT: Record<VerdictColor, string> = {
   green: '#34d399',
   gold:  '#d4a656',
   red:   '#f87171',
+  gray:  '#6b7280',
 };
 
 const HIDE_DELAY = 130; // ms — keeps tooltip alive while mouse travels button→card
@@ -43,13 +22,13 @@ const HIDE_DELAY = 130; // ms — keeps tooltip alive while mouse travels button
 // ─── Component ───────────────────────────────────────────────────────────────
 
 export function InfoTip({ tip }: { tip: TipContent }) {
-  const [open, setOpen]     = useState(false);
+  const [open, setOpen]       = useState(false);
   const [mounted, setMounted] = useState(false);
-  const [pos, setPos]       = useState({ top: 0, left: 0, arrowLeft: '50%', w: 360 });
+  const [pos, setPos]         = useState({ top: 0, left: 0, arrowLeft: '50%', w: 360 });
 
-  const btnRef     = useRef<HTMLButtonElement>(null);
-  const cardRef    = useRef<HTMLDivElement>(null);
-  const hideTimer  = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const btnRef    = useRef<HTMLButtonElement>(null);
+  const cardRef   = useRef<HTMLDivElement>(null);
+  const hideTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   useEffect(() => { setMounted(true); }, []);
 
@@ -65,23 +44,15 @@ export function InfoTip({ tip }: { tip: TipContent }) {
   const show = useCallback(() => {
     cancelHide();
     if (!btnRef.current) return;
-    const r   = btnRef.current.getBoundingClientRect();
-    const w   = window.innerWidth < 640 ? 280 : 360;
+    const r    = btnRef.current.getBoundingClientRect();
+    const w    = window.innerWidth < 640 ? 280 : 360;
     const btnX = r.left + r.width / 2;
-    // Clamp so tooltip doesn't bleed off screen edges
     const clampedLeft = Math.min(Math.max(btnX, w / 2 + 12), window.innerWidth - w / 2 - 12);
-    // Arrow offset: where the point sits relative to tooltip's left edge (as %)
     const arrowPct = ((btnX - (clampedLeft - w / 2)) / w * 100).toFixed(1);
-    setPos({
-      top:       r.bottom + 8,          // below the icon for now — flipped in render
-      left:      clampedLeft,
-      arrowLeft: `${arrowPct}%`,
-      w,
-    });
+    setPos({ top: r.bottom + 8, left: clampedLeft, arrowLeft: `${arrowPct}%`, w });
     setOpen(true);
   }, [cancelHide]);
 
-  // Close on outside tap/click
   useEffect(() => {
     if (!open) return;
     function onOutside(e: MouseEvent | TouchEvent) {
@@ -102,7 +73,7 @@ export function InfoTip({ tip }: { tip: TipContent }) {
 
   const toggle = useCallback((e: React.MouseEvent) => {
     e.stopPropagation();
-    open ? setOpen(false) : show();
+    if (open) { setOpen(false); } else { show(); }
   }, [open, show]);
 
   const hasVerdicts = tip.verdicts && tip.verdicts.length > 0;
@@ -118,20 +89,20 @@ export function InfoTip({ tip }: { tip: TipContent }) {
         onMouseEnter={show}
         onMouseLeave={scheduleHide}
         style={{
-          display: 'inline-flex',
-          alignItems: 'center',
-          marginLeft: '5px',
-          verticalAlign: 'middle',
-          opacity: 0.35,
-          color: 'var(--gold)',
-          fontSize: '11px',
-          lineHeight: 1,
-          flexShrink: 0,
-          background: 'none',
-          border: 'none',
-          padding: 0,
-          cursor: 'pointer',
-          transition: 'opacity 0.15s',
+          display:        'inline-flex',
+          alignItems:     'center',
+          marginLeft:     '5px',
+          verticalAlign:  'middle',
+          opacity:        0.35,
+          color:          'var(--gold)',
+          fontSize:       '11px',
+          lineHeight:     1,
+          flexShrink:     0,
+          background:     'none',
+          border:         'none',
+          padding:        0,
+          cursor:         'pointer',
+          transition:     'opacity 0.15s',
         }}
       >
         ⓘ
@@ -143,14 +114,12 @@ export function InfoTip({ tip }: { tip: TipContent }) {
           onMouseEnter={cancelHide}
           onMouseLeave={scheduleHide}
           style={{
-            position: 'fixed',
-            // pos.top is r.bottom + 8; we flip to above by using transform
-            top:  pos.top,
-            left: pos.left,
-            // Move up by full own height + the 8px gap we added, so it sits above the button
-            transform: `translate(-50%, calc(-100% - 16px))`,
-            width: `${pos.w}px`,
-            zIndex: 9999,
+            position:  'fixed',
+            top:       pos.top,
+            left:      pos.left,
+            transform: 'translate(-50%, calc(-100% - 16px))',
+            width:     `${pos.w}px`,
+            zIndex:    9999,
             pointerEvents: 'auto',
           }}
         >
@@ -225,25 +194,33 @@ export function InfoTip({ tip }: { tip: TipContent }) {
               </div>
             )}
 
-            {/* Current value */}
+            {/* Current value — stacked layout */}
             {tip.current && (
-              <div style={{ display: 'flex', alignItems: 'center', gap: '5px', flexWrap: 'wrap', fontSize: '11px' }}>
-                <span style={{ color: 'rgba(212,166,86,0.5)', fontWeight: 700, letterSpacing: '0.06em', textTransform: 'uppercase', fontSize: '10px' }}>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '4px', fontSize: '11px' }}>
+                <span style={{
+                  color:         'rgba(212,166,86,0.5)',
+                  fontWeight:    700,
+                  letterSpacing: '0.06em',
+                  textTransform: 'uppercase',
+                  fontSize:      '10px',
+                }}>
                   Now
                 </span>
-                <span style={{
-                  display:      'inline-block',
-                  width:        '6px',
-                  height:       '6px',
-                  borderRadius: '50%',
-                  background:   DOT[tip.current.verdict],
-                  flexShrink:   0,
-                }} />
-                <span style={{ color: 'rgba(255,255,255,0.92)', fontWeight: 600 }}>
-                  {tip.current.text}
-                </span>
-                <span style={{ color: 'rgba(255,255,255,0.42)' }}>
-                  — {tip.current.interpretation}
+                <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                  <span style={{
+                    display:      'inline-block',
+                    width:        '6px',
+                    height:       '6px',
+                    borderRadius: '50%',
+                    background:   DOT[tip.current.verdict],
+                    flexShrink:   0,
+                  }} />
+                  <span style={{ color: 'rgba(255,255,255,0.92)', fontWeight: 600 }}>
+                    {tip.current.text}
+                  </span>
+                </div>
+                <span style={{ color: 'rgba(255,255,255,0.42)', paddingLeft: '12px' }}>
+                  {tip.current.interpretation}
                 </span>
               </div>
             )}
@@ -251,7 +228,6 @@ export function InfoTip({ tip }: { tip: TipContent }) {
 
           {/* Arrow pointer — downward triangle below the card */}
           <div style={{ position: 'relative', height: '7px', marginTop: '-1px' }}>
-            {/* Outer (border colour) */}
             <div style={{
               position:    'absolute',
               top:         0,
@@ -263,7 +239,6 @@ export function InfoTip({ tip }: { tip: TipContent }) {
               borderRight: '7px solid transparent',
               borderTop:   '7px solid rgba(212,166,86,0.22)',
             }} />
-            {/* Inner (card fill colour) */}
             <div style={{
               position:    'absolute',
               top:         0,

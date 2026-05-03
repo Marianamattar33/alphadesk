@@ -3,40 +3,27 @@ import Link from 'next/link';
 import { ArrowLeft, TrendingUp, TrendingDown, ExternalLink, BookmarkPlus } from 'lucide-react';
 import { analyzeTicker } from '@/lib/analyze';
 import ThesisSection from './ThesisSection';
-import { InfoTip, type TipContent, type TipCurrent, type VerdictColor } from '@/components/InfoTip';
+import { InfoTip } from '@/components/InfoTip';
+import type { TipContent } from '@/types/tips';
 import type { PrincipleResult, ValuationSteps } from '@/types/lookup';
+import {
+  marketCapTip, range52wTip, volumeTip, betaTip,
+  sma50Tip, sma200Tip, ema50Tip, rsiTip, wrTip, fibTip,
+  peTip, cashRunwayTip, salesGrowthTip, avgMarginTip,
+  avgPE6mTip, projectedNITip, futureMktCapTip, possibleReturnTip,
+  consensusTargetTip, targetHighTip, targetLowTip, upsideTip,
+  nextReportTip, lastReportTip, epsActualEstTip,
+  principleTip,
+} from '@/lib/tips';
 
 export const dynamic = 'force-dynamic';
 
-// ─── Tooltip current-value helpers ──────────────────────────────────────────
-
-function wrCurrent(wr: number, trend: string, crossing40: boolean): TipCurrent {
-  const text = `${wr.toFixed(0)} (${trend})`;
-  let verdict: VerdictColor;
-  let interpretation: string;
-  if (crossing40)       { verdict = 'green'; interpretation = 'crossing −40 — swing momentum trigger'; }
-  else if (wr <= -90)   { verdict = 'green'; interpretation = 'portfolio entry zone'; }
-  else if (wr <= -80)   { verdict = 'green'; interpretation = 'oversold, watch for reversal'; }
-  else if (wr <= -40)   { verdict = 'gold';  interpretation = 'neutral, no entry signal yet'; }
-  else if (wr <= -20)   { verdict = 'gold';  interpretation = 'neutral-bullish, not a trigger yet'; }
-  else                  { verdict = 'red';   interpretation = 'overbought — avoid entry'; }
-  return { text, verdict, interpretation };
-}
-
-function peCurrent(pe: number | null): TipCurrent | undefined {
-  if (pe === null) return undefined;
-  const text = `${pe.toFixed(1)}×`;
-  if (pe < 20)   return { text, verdict: 'gold',  interpretation: 'conservative (< 20)' };
-  if (pe <= 39)  return { text, verdict: 'green', interpretation: 'leader sweet spot (20–39)' };
-  return           { text, verdict: 'red',   interpretation: 'high risk (≥ 40)' };
-}
-
-// ─── Helpers ────────────────────────────────────────────────────────────────
+// ─── Helpers ─────────────────────────────────────────────────────────────────
 
 const STATUS_COLOR: Record<string, string> = {
-  PASS: '#34d399',
+  PASS:   '#34d399',
   CAUTION: '#fb923c',
-  FAIL: '#f87171',
+  FAIL:   '#f87171',
   MANUAL: '#a78bfa',
 };
 
@@ -46,8 +33,8 @@ function fmt(n: number, decimals = 2) {
 
 function fmtB(n: number) {
   if (n >= 1e12) return `$${(n / 1e12).toFixed(1)}T`;
-  if (n >= 1e9) return `$${(n / 1e9).toFixed(1)}B`;
-  if (n >= 1e6) return `$${(n / 1e6).toFixed(1)}M`;
+  if (n >= 1e9)  return `$${(n / 1e9).toFixed(1)}B`;
+  if (n >= 1e6)  return `$${(n / 1e6).toFixed(1)}M`;
   return `$${n.toFixed(0)}`;
 }
 
@@ -62,7 +49,7 @@ function StatusBadge({ status }: { status: string }) {
     <span
       className="px-2 py-0.5 rounded text-xs font-bold tracking-wider"
       style={{
-        color: STATUS_COLOR[status] ?? '#9ca3af',
+        color:      STATUS_COLOR[status] ?? '#9ca3af',
         background: `${STATUS_COLOR[status] ?? '#9ca3af'}18`,
       }}
     >
@@ -71,9 +58,10 @@ function StatusBadge({ status }: { status: string }) {
   );
 }
 
-// ─── Sub-panels ─────────────────────────────────────────────────────────────
+// ─── Sub-panels ──────────────────────────────────────────────────────────────
 
 function PrincipleCard({ p }: { p: PrincipleResult }) {
+  const tip = principleTip(p);
   return (
     <div
       className="rounded-xl p-4 space-y-2"
@@ -85,7 +73,10 @@ function PrincipleCard({ p }: { p: PrincipleResult }) {
         </span>
         <StatusBadge status={p.status} />
       </div>
-      <p className="text-xs font-semibold" style={{ color: 'var(--text)' }}>{p.name}</p>
+      <p className="text-xs font-semibold inline-flex items-center" style={{ color: 'var(--text)' }}>
+        {p.name}
+        <InfoTip tip={tip} />
+      </p>
       <p className="text-xs leading-relaxed" style={{ color: 'var(--text-muted)' }}>{p.headline}</p>
     </div>
   );
@@ -102,6 +93,20 @@ function ValuationRow({ label, value, note, tip }: { label: string; value: strin
         {value}
         {note && <span className="ml-1 text-[10px] opacity-50">{note}</span>}
       </span>
+    </div>
+  );
+}
+
+function HeroStat({ label, value, tip }: { label: string; value: string; tip?: TipContent }) {
+  return (
+    <div>
+      <p className="inline-flex items-center text-[10px] uppercase tracking-wider" style={{ color: 'var(--text-muted)' }}>
+        {label}
+        {tip && <InfoTip tip={tip} />}
+      </p>
+      <p className="text-sm font-semibold mt-0.5" style={{ fontFamily: 'var(--font-mono)', color: 'var(--text)' }}>
+        {value}
+      </p>
     </div>
   );
 }
@@ -128,10 +133,9 @@ export default async function LookupPage({ params }: { params: Promise<{ ticker:
     );
   }
 
-  const a = analysis;
+  const a  = analysis;
   const up = a.change >= 0;
   const changeColor = up ? 'var(--green)' : 'var(--red)';
-
   const v: ValuationSteps = a.valuation;
 
   return (
@@ -184,17 +188,10 @@ export default async function LookupPage({ params }: { params: Promise<{ ticker:
 
         {/* Quick stats */}
         <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 mt-4 pt-4" style={{ borderTop: '1px solid var(--border)' }}>
-          {[
-            ['Market Cap', fmtB(a.marketCap)],
-            ['52w Range', `$${fmt(a.low52w)} – $${fmt(a.high52w)}`],
-            ['Volume', fmtVol(a.volume)],
-            ['Beta', fmt(a.beta, 2)],
-          ].map(([label, value]) => (
-            <div key={label}>
-              <p className="text-[10px] uppercase tracking-wider" style={{ color: 'var(--text-muted)' }}>{label}</p>
-              <p className="text-sm font-semibold mt-0.5" style={{ fontFamily: 'var(--font-mono)', color: 'var(--text)' }}>{value}</p>
-            </div>
-          ))}
+          <HeroStat label="Market Cap"  value={fmtB(a.marketCap)}                         tip={marketCapTip(a.marketCap)} />
+          <HeroStat label="52w Range"   value={`$${fmt(a.low52w)} – $${fmt(a.high52w)}`}  tip={range52wTip} />
+          <HeroStat label="Volume"      value={fmtVol(a.volume)}                           tip={volumeTip} />
+          <HeroStat label="Beta"        value={fmt(a.beta, 2)}                             tip={betaTip(a.beta)} />
         </div>
       </div>
 
@@ -209,34 +206,20 @@ export default async function LookupPage({ params }: { params: Promise<{ ticker:
           <h2 className="text-xs font-semibold uppercase tracking-widest mb-3" style={{ color: 'var(--gold)' }}>
             Technicals
           </h2>
-          <ValuationRow label="SMA 50" value={`$${fmt(a.sma50)}`} />
-          <ValuationRow label="SMA 200" value={`$${fmt(a.sma200)}`} />
-          <ValuationRow label="EMA 50" value={`$${fmt(a.ema50)}`} />
-          <ValuationRow label="RSI (14)" value={fmt(a.rsi14, 0)} />
+          <ValuationRow label="SMA 50"      value={`$${fmt(a.sma50)}`}                              tip={sma50Tip(a.price, a.sma50)} />
+          <ValuationRow label="SMA 200"     value={`$${fmt(a.sma200)}`}                             tip={sma200Tip(a.price, a.sma200)} />
+          <ValuationRow label="EMA 50"      value={`$${fmt(a.ema50)}`}                              tip={ema50Tip(a.price, a.ema50)} />
+          <ValuationRow label="RSI (14)"    value={fmt(a.rsi14, 0)}                                 tip={rsiTip(a.rsi14)} />
           <ValuationRow
             label="Williams %R"
             value={`${fmt(a.williamsR, 0)} (${a.williamsRTrend})`}
-            tip={{
-              title: 'Williams %R — 14-period',
-              lines: [
-                { label: 'Formula', value: '(Highest High − Close) / (Highest High − Lowest Low) × −100' },
-                { label: 'Source',  value: '14-day high / low / close from FMP' },
-              ],
-              verdicts: [
-                { color: 'green', text: '≤ −90 — portfolio entry zone' },
-                { color: 'green', text: '≤ −80 — oversold, watch for reversal' },
-                { color: 'green', text: 'Rising through −40 — swing momentum trigger' },
-                { color: 'gold',  text: '−40 to −80 (flat/falling) — neutral, wait for signal' },
-                { color: 'gold',  text: '−20 to −40 — neutral-bullish, not yet a trigger' },
-                { color: 'red',   text: '> −20 — overbought, avoid entry' },
-              ],
-              current: wrCurrent(a.williamsR, a.williamsRTrend, a.williamsRCrossing40),
-            }}
+            tip={wrTip(a.williamsR, a.williamsRTrend, a.williamsRCrossing40)}
           />
           <ValuationRow
             label="Fib Golden Zone"
             value={`$${fmt(a.fibGoldenZoneLow)} – $${fmt(a.fibGoldenZoneHigh)}`}
             note={a.inFibGoldenZone ? '✓ IN ZONE' : ''}
+            tip={fibTip(a.fibGoldenZoneLow, a.fibGoldenZoneHigh, a.inFibGoldenZone)}
           />
         </div>
 
@@ -250,12 +233,25 @@ export default async function LookupPage({ params }: { params: Promise<{ ticker:
           </h2>
           {a.priceTargetConsensus ? (
             <>
-              <ValuationRow label="Consensus Target" value={`$${fmt(a.priceTargetConsensus)}`} />
-              <ValuationRow label="Target High" value={a.priceTargetHigh ? `$${fmt(a.priceTargetHigh)}` : 'N/A'} />
-              <ValuationRow label="Target Low" value={a.priceTargetLow ? `$${fmt(a.priceTargetLow)}` : 'N/A'} />
+              <ValuationRow
+                label="Consensus Target"
+                value={`$${fmt(a.priceTargetConsensus)}`}
+                tip={consensusTargetTip(a.priceTargetConsensus, a.price)}
+              />
+              <ValuationRow
+                label="Target High"
+                value={a.priceTargetHigh ? `$${fmt(a.priceTargetHigh)}` : 'N/A'}
+                tip={targetHighTip}
+              />
+              <ValuationRow
+                label="Target Low"
+                value={a.priceTargetLow ? `$${fmt(a.priceTargetLow)}` : 'N/A'}
+                tip={targetLowTip}
+              />
               <ValuationRow
                 label="Upside to Consensus"
                 value={a.upsideToConsensus !== null ? `${a.upsideToConsensus >= 0 ? '+' : ''}${fmt(a.upsideToConsensus, 1)}%` : 'N/A'}
+                tip={upsideTip(a.upsideToConsensus)}
               />
             </>
           ) : (
@@ -264,14 +260,15 @@ export default async function LookupPage({ params }: { params: Promise<{ ticker:
           <div className="pt-3 mt-2" style={{ borderTop: '1px solid var(--border)' }}>
             <p className="text-[10px] uppercase tracking-wider mb-2" style={{ color: 'var(--text-muted)' }}>Earnings</p>
             {a.nextEarningsDate && (
-              <ValuationRow label="Next Report" value={a.nextEarningsDate} />
+              <ValuationRow label="Next Report" value={a.nextEarningsDate} tip={nextReportTip} />
             )}
             {a.lastEarnings && (
               <>
-                <ValuationRow label="Last Report" value={a.lastEarnings.date} />
+                <ValuationRow label="Last Report" value={a.lastEarnings.date} tip={lastReportTip} />
                 <ValuationRow
                   label="EPS Actual / Est"
                   value={`${a.lastEarnings.epsActual?.toFixed(2) ?? '—'} / ${a.lastEarnings.epsEstimated?.toFixed(2) ?? '—'}`}
+                  tip={epsActualEstTip(a.lastEarnings.epsActual, a.lastEarnings.epsEstimated)}
                 />
               </>
             )}
@@ -304,46 +301,48 @@ export default async function LookupPage({ params }: { params: Promise<{ ticker:
           label="① P/E Ratio"
           value={v.pe.value !== null ? `${fmt(v.pe.value, 1)}x` : 'N/A'}
           note={`(${v.pe.category})`}
-          tip={{
-            title: 'P/E Ratio — Principio V',
-            lines: [
-              { label: 'Formula', value: 'Current price ÷ diluted EPS (trailing 12 months)' },
-              { label: 'Source',  value: 'FMP live price + latest annual income statement' },
-            ],
-            verdicts: [
-              { color: 'green', text: '20–39 — leader sweet spot' },
-              { color: 'gold',  text: '< 20 — conservative; possible value but slow-growth signal' },
-              { color: 'red',   text: '≥ 40 — high risk; growth expectations already priced in' },
-              { color: 'gold',  text: 'Negative EPS — not yet profitable, P/E not applicable' },
-            ],
-            current: peCurrent(v.pe.value),
-          }}
+          tip={peTip(v.pe.value)}
         />
         <ValuationRow
           label="② Cash Runway"
           value={v.cashRunway.months > 200 ? '>200 months' : `${v.cashRunway.months.toFixed(0)} months`}
           note={`Debt/Cap: ${v.cashRunway.debtToCapital.toFixed(1)}%`}
+          tip={cashRunwayTip(v.cashRunway.months, v.cashRunway.debtToCapital)}
         />
         <ValuationRow
           label="③ Revenue Growth YoY"
           value={`${v.salesGrowth.yoy >= 0 ? '+' : ''}${fmt(v.salesGrowth.yoy, 1)}%`}
           note={v.salesGrowth.cagr3y !== null ? `3yr CAGR: ${v.salesGrowth.cagr3y.toFixed(1)}%` : undefined}
+          tip={salesGrowthTip(v.salesGrowth.yoy, v.salesGrowth.cagr3y, v.salesGrowth.phase)}
         />
-        <ValuationRow label="④ Avg Net Margin (4yr)" value={`${fmt(v.avgMargin.value, 1)}%`} />
+        <ValuationRow
+          label="④ Avg Net Margin (4yr)"
+          value={`${fmt(v.avgMargin.value, 1)}%`}
+          tip={avgMarginTip(v.avgMargin.value)}
+        />
         <ValuationRow
           label="⑤ Avg P/E 6-Month"
           value={v.avgPE6m.value !== null ? `${fmt(v.avgPE6m.value, 1)}x` : 'N/A'}
           note="(approx)"
+          tip={avgPE6mTip(v.avgPE6m.value)}
         />
         <ValuationRow
           label="⑥ Projected Revenue"
           value={fmtB(v.projectedNI.revenue)}
           note={`→ NI: ${fmtB(v.projectedNI.netIncome)}`}
+          tip={projectedNITip(v.projectedNI.revenue, v.projectedNI.netIncome)}
         />
-        <ValuationRow label="⑦ Future Mkt Cap" value={fmtB(v.futureMktCap.value)} />
+        <ValuationRow
+          label="⑦ Future Mkt Cap"
+          value={fmtB(v.futureMktCap.value)}
+          tip={futureMktCapTip}
+        />
         <div className="pt-2">
           <div className="flex items-baseline justify-between">
-            <span className="text-sm font-semibold" style={{ color: 'var(--text)' }}>⑧ Possible Return</span>
+            <span className="inline-flex items-center text-sm font-semibold" style={{ color: 'var(--text)' }}>
+              ⑧ Possible Return
+              <InfoTip tip={possibleReturnTip(v.possibleReturn.value)} />
+            </span>
             <span
               className="text-xl font-bold"
               style={{
