@@ -11,10 +11,11 @@ export type { TipLine, TipVerdict, TipCurrent } from '@/types/tips';
 // ─── Internal constants ──────────────────────────────────────────────────────
 
 const DOT: Record<VerdictColor, string> = {
-  green: '#34d399',
-  gold:  '#d4a656',
-  red:   '#f87171',
-  gray:  '#6b7280',
+  green:  '#34d399',
+  gold:   '#d4a656',
+  red:    '#f87171',
+  purple: '#a78bfa',
+  gray:   '#6b7280',
 };
 
 const HIDE_DELAY = 130; // ms — keeps tooltip alive while mouse travels button→card

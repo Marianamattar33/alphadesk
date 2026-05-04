@@ -11,9 +11,10 @@ function fmtB(n: number): string {
 }
 
 function statusVerdict(status: string): VerdictColor {
-  if (status === 'PASS')   return 'green';
+  if (status === 'PASS')    return 'green';
   if (status === 'CAUTION') return 'gold';
-  if (status === 'FAIL')   return 'red';
+  if (status === 'FAIL')    return 'red';
+  if (status === 'MANUAL')  return 'purple';
   return 'gray';
 }
 
@@ -561,7 +562,7 @@ export function principleTip(p: PrincipleResult): TipContent {
         { label: 'Source', value: 'alphaspread.com or company IR page for transcripts' },
         { label: 'Check',  value: 'Tone, guidance, CEO confidence, red flag language, Q&A' },
       ],
-      current: { text: 'MANUAL', verdict: 'gray', interpretation: 'human judgment required — cannot be automated' },
+      current: { text: 'MANUAL', verdict: 'purple', interpretation: 'human judgment required — cannot be automated' },
     };
     case 5: return {
       title: 'Principio V — P/E Ratio',
@@ -584,7 +585,7 @@ export function principleTip(p: PrincipleResult): TipContent {
         { label: 'R:R',      value: '≥ 1:3 for portfolio entries; ≥ 1:2 for swing trades' },
         { label: 'Source',   value: 'TradingView or brokerage chart — manual identification' },
       ],
-      current: { text: 'MANUAL', verdict: 'gray', interpretation: 'chart analysis required — cannot be automated' },
+      current: { text: 'MANUAL', verdict: 'purple', interpretation: 'chart analysis required — cannot be automated' },
     };
     case 7: return {
       title: 'Principio VII — Williams %R',

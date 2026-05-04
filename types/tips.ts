@@ -1,4 +1,4 @@
-export type VerdictColor = 'green' | 'gold' | 'red' | 'gray';
+export type VerdictColor = 'green' | 'gold' | 'red' | 'purple' | 'gray';
 
 export interface TipLine {
   label: string;

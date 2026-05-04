@@ -21,10 +21,10 @@ export const dynamic = 'force-dynamic';
 // ─── Helpers ─────────────────────────────────────────────────────────────────
 
 const STATUS_COLOR: Record<string, string> = {
-  PASS:   '#34d399',
-  CAUTION: '#fb923c',
-  FAIL:   '#f87171',
-  MANUAL: '#a78bfa',
+  PASS:    '#34d399',
+  CAUTION: '#d4a656',
+  FAIL:    '#f87171',
+  MANUAL:  '#a78bfa',
 };
 
 function fmt(n: number, decimals = 2) {
