@@ -216,7 +216,7 @@ export function fibTip(low: number, high: number, inZone: boolean): TipContent {
 
 // ─── 8-Step Valuation ─────────────────────────────────────────────────────────
 
-export function peTip(pe: number | null): TipContent {
+export function peTip(pe: number | null, epsSource: 'ttm' | 'annual-fallback' = 'ttm'): TipContent {
   let current: TipCurrent | undefined;
   if (pe === null) {
     current = { text: 'N/A', verdict: 'gray', interpretation: 'no positive EPS — P/E not applicable' };
@@ -227,11 +227,22 @@ export function peTip(pe: number | null): TipContent {
   } else {
     current = { text: `${pe.toFixed(1)}×`, verdict: 'red', interpretation: 'high risk (≥ 40)' };
   }
+  const isFallback = epsSource === 'annual-fallback';
   return {
     title: 'P/E Ratio — Principio V',
     lines: [
-      { label: 'Formula', value: 'Current price ÷ diluted EPS (trailing 12 months)' },
-      { label: 'Source',  value: 'FMP /quote (price) + /income-statement (diluted EPS)' },
+      {
+        label: 'Formula',
+        value: isFallback
+          ? 'Current price ÷ latest annual diluted EPS (quarterly data unavailable)'
+          : 'Current price ÷ sum of diluted EPS from last 4 reported quarters (TTM)',
+      },
+      {
+        label: 'Source',
+        value: isFallback
+          ? 'FMP /quote (price) + /income-statement annual — quarterly fallback'
+          : 'FMP /quote (price) + /income-statement?period=quarter&limit=4 (TTM EPS)',
+      },
     ],
     verdicts: [
       { color: 'green', text: '20–39 — leader sweet spot' },

@@ -3,6 +3,7 @@ import {
   fetchProfile,
   fetchHistoricalPrices,
   fetchIncomeStatements,
+  fetchQuarterlyIncomeStatements,
   fetchBalanceSheet,
   fetchPriceTargets,
   fetchEarnings,
@@ -15,12 +16,13 @@ import type { StockAnalysis } from '@/types/lookup';
 export async function analyzeTicker(ticker: string): Promise<StockAnalysis> {
   const t = ticker.toUpperCase().trim().replace(/\./g, '-'); // BRK.B → BRK-B (FMP uses hyphens)
 
-  const [quote, profile, history, income, balance, targets, earnings, newsRaw] =
+  const [quote, profile, history, income, quarterlyIncome, balance, targets, earnings, newsRaw] =
     await Promise.all([
       fetchQuote(t),
       fetchProfile(t),
       fetchHistoricalPrices(t, 252),
       fetchIncomeStatements(t, 4),
+      fetchQuarterlyIncomeStatements(t, 5),
       fetchBalanceSheet(t),
       fetchPriceTargets(t),
       fetchEarnings(t),
@@ -31,11 +33,15 @@ export async function analyzeTicker(ticker: string): Promise<StockAnalysis> {
 
   const technicals = computeTechnicals(history, quote);
 
-  const abacusInput = { quote, technicals, income, balance, targets };
+  const abacusInput = { quote, technicals, income, quarterlyIncome, balance, targets };
   const principles = evaluatePrinciples(abacusInput);
   const valuation = computeValuation(abacusInput);
 
-  const eps = income[0]?.epsDiluted ?? income[0]?.eps ?? 0;
+  // TTM EPS: sum last 4 quarters; fall back to latest annual if quarterly unavailable
+  const annualEps = income[0]?.epsDiluted ?? income[0]?.eps ?? 0;
+  const eps = quarterlyIncome.length >= 4
+    ? quarterlyIncome.slice(0, 4).reduce((s, q) => s + (q.epsDiluted ?? q.eps ?? 0), 0)
+    : annualEps;
   const trailingPE = eps > 0 ? quote.price / eps : null;
 
   const margins = income

@@ -5,15 +5,31 @@ import type { PrincipleResult, ValuationSteps } from '@/types/lookup';
 interface AbacusInput {
   quote: FMPQuote;
   technicals: Technicals;
-  income: FMPIncomeStatement[];
+  income: FMPIncomeStatement[];          // annual, newest-first
+  quarterlyIncome: FMPIncomeStatement[]; // quarterly, newest-first
   balance: FMPBalanceSheet | null;
   targets: FMPPriceTarget | null;
+}
+
+// ─── TTM EPS helper ───────────────────────────────────────────────────────────
+
+function resolveTTMEps(
+  quarters: FMPIncomeStatement[],
+  annualFallback: number,
+): { eps: number; source: 'ttm' | 'annual-fallback' } {
+  if (quarters.length >= 4) {
+    const ttm = quarters
+      .slice(0, 4)
+      .reduce((sum, q) => sum + (q.epsDiluted ?? q.eps ?? 0), 0);
+    return { eps: ttm, source: 'ttm' };
+  }
+  return { eps: annualFallback, source: 'annual-fallback' };
 }
 
 // ─── 7 PRINCIPLES ───────────────────────────────────────────────────────────
 
 export function evaluatePrinciples(input: AbacusInput): PrincipleResult[] {
-  const { quote, technicals, income, targets } = input;
+  const { quote, technicals, income, quarterlyIncome, targets } = input;
   const price = quote.price;
   const latest = income[0];
   const prev = income[1];
@@ -54,7 +70,6 @@ export function evaluatePrinciples(input: AbacusInput): PrincipleResult[] {
     else if (yoy >= 0) { phase = 'Slow Growth'; status = 'CAUTION'; }
     else { phase = 'Declining'; status = 'FAIL'; }
 
-    // 3-year CAGR if we have 4 periods
     let cagr3yStr = '';
     if (income[3] && income[3].revenue > 0) {
       const cagr3y = (Math.pow(latest.revenue / income[3].revenue, 1 / 3) - 1) * 100;
@@ -92,9 +107,10 @@ export function evaluatePrinciples(input: AbacusInput): PrincipleResult[] {
     detail: 'Review the latest earnings call transcript on alphaspread.com for tone, guidance, and red flags. This principle cannot be automated.',
   };
 
-  // ── Principio V: P/E Ratio ────────────────────────────────────────────
+  // ── Principio V: P/E Ratio (TTM EPS) ─────────────────────────────────
   const p5 = ((): PrincipleResult => {
-    const eps = latest?.epsDiluted ?? latest?.eps ?? 0;
+    const annualEps = latest?.epsDiluted ?? latest?.eps ?? 0;
+    const { eps } = resolveTTMEps(quarterlyIncome, annualEps);
     if (!eps || eps <= 0) {
       return {
         id: 5, name: 'P/E Ratio', nameEs: 'Ratio P/E',
@@ -111,8 +127,8 @@ export function evaluatePrinciples(input: AbacusInput): PrincipleResult[] {
     return {
       id: 5, name: 'P/E Ratio', nameEs: 'Ratio P/E',
       status,
-      headline: `P/E ${pe.toFixed(1)} — ${category}`,
-      detail: `Trailing P/E based on diluted EPS $${eps.toFixed(2)}. Principio V: <20 conservative, 20–39 leader sweet spot, 40+ high risk.`,
+      headline: `P/E ${pe.toFixed(1)} — ${category} (TTM)`,
+      detail: `Trailing P/E based on TTM diluted EPS $${eps.toFixed(2)}. Principio V: <20 conservative, 20–39 leader sweet spot, 40+ high risk.`,
     };
   })();
 
@@ -162,16 +178,19 @@ export function evaluatePrinciples(input: AbacusInput): PrincipleResult[] {
 // ─── 8-STEP VALUATION ───────────────────────────────────────────────────────
 
 export function computeValuation(input: AbacusInput): ValuationSteps {
-  const { quote, technicals, income, balance } = input;
+  const { quote, technicals, income, quarterlyIncome, balance } = input;
   const price = quote.price;
   const latest = income[0];
   const prev = income[1];
 
-  // Step 1: P/E
-  const eps = latest?.epsDiluted ?? latest?.eps ?? 0;
-  const pe = eps > 0 ? price / eps : null;
+  // Step 1: P/E — use TTM EPS (sum of last 4 quarterly diluted EPS)
+  const annualEps = latest?.epsDiluted ?? latest?.eps ?? 0;
+  const { eps: ttmEps, source: epsSource } = resolveTTMEps(quarterlyIncome, annualEps);
+  const pe = ttmEps > 0 ? price / ttmEps : null;
   const peCategory: ValuationSteps['pe']['category'] =
-    pe === null ? 'na' : eps <= 0 ? 'negative' : pe < 20 ? 'conservative' : pe <= 39 ? 'sweet-spot' : 'high-risk';
+    ttmEps <= 0 ? (ttmEps < 0 ? 'negative' : 'na')
+    : pe === null ? 'na'
+    : pe < 20 ? 'conservative' : pe <= 39 ? 'sweet-spot' : 'high-risk';
 
   // Step 2: Cash runway + debt/capital
   const cash = balance?.cashAndCashEquivalents ?? 0;
@@ -181,7 +200,7 @@ export function computeValuation(input: AbacusInput): ValuationSteps {
   const cashRunwayMonths = monthlyOpEx > 0 ? cash / monthlyOpEx : 999;
   const debtToCapital = debt + equity > 0 ? (debt / (debt + equity)) * 100 : 0;
 
-  // Step 3: Sales growth
+  // Step 3: Sales growth (annual — correct; revenue CAGR uses annual fiscal years)
   const yoy = latest && prev && prev.revenue > 0
     ? ((latest.revenue - prev.revenue) / prev.revenue) * 100
     : 0;
@@ -192,14 +211,14 @@ export function computeValuation(input: AbacusInput): ValuationSteps {
   const phase =
     yoy > 20 ? 'Growth-Leader' : yoy >= 5 ? 'Mature' : yoy >= 0 ? 'Slow Growth' : 'Declining';
 
-  // Step 4: Avg profit margin (4-year)
+  // Step 4: Avg profit margin (4-year annual — correct for trend)
   const margins = income
     .filter(s => s.revenue > 0)
     .map(s => (s.netIncome / s.revenue) * 100);
   const avgMargin = margins.length > 0 ? margins.reduce((a, b) => a + b, 0) / margins.length : 0;
 
-  // Step 5: P/E 6-month avg (approximation: avg close over 126 days / diluted EPS)
-  const avgPE6m = eps > 0 ? technicals.avgClose6m / eps : null;
+  // Step 5: Avg P/E 6-month — use TTM EPS as denominator
+  const avgPE6m = ttmEps > 0 ? technicals.avgClose6m / ttmEps : null;
 
   // Step 6: Projected Net Income = projected revenue × avg margin
   const growthRate = cagr3y !== null ? cagr3y / 100 : yoy / 100;
@@ -216,13 +235,13 @@ export function computeValuation(input: AbacusInput): ValuationSteps {
     currentMktCap > 0 ? ((futureMktCap / currentMktCap) - 1) * 100 : 0;
 
   return {
-    pe: { value: pe, category: peCategory },
+    pe: { value: pe, category: peCategory, epsSource },
     cashRunway: { months: cashRunwayMonths, debtToCapital },
     salesGrowth: { yoy, cagr3y, phase },
     avgMargin: { value: avgMargin },
     avgPE6m: {
       value: avgPE6m,
-      note: 'Approximated from 6-month avg price ÷ trailing EPS (YCharts recommended for precise value)',
+      note: 'Approximated from 6-month avg price ÷ TTM EPS (YCharts recommended for precise value)',
     },
     projectedNI: { revenue: projectedRevenue, netIncome: projectedNI },
     futureMktCap: { value: futureMktCap },

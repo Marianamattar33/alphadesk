@@ -301,7 +301,7 @@ export default async function LookupPage({ params }: { params: Promise<{ ticker:
           label="① P/E Ratio"
           value={v.pe.value !== null ? `${fmt(v.pe.value, 1)}x` : 'N/A'}
           note={`(${v.pe.category})`}
-          tip={peTip(v.pe.value)}
+          tip={peTip(v.pe.value, v.pe.epsSource)}
         />
         <ValuationRow
           label="② Cash Runway"

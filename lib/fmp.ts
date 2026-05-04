@@ -122,6 +122,10 @@ export async function fetchIncomeStatements(ticker: string, limit = 4): Promise<
   return fmpGet<FMPIncomeStatement[]>(`income-statement?symbol=${ticker}&limit=${limit}`);
 }
 
+export async function fetchQuarterlyIncomeStatements(ticker: string, limit = 5): Promise<FMPIncomeStatement[]> {
+  return fmpGet<FMPIncomeStatement[]>(`income-statement?symbol=${ticker}&period=quarter&limit=${limit}`);
+}
+
 export async function fetchBalanceSheet(ticker: string): Promise<FMPBalanceSheet | null> {
   const data = await fmpGet<FMPBalanceSheet[]>(`balance-sheet-statement?symbol=${ticker}&limit=1`);
   return data[0] ?? null;
