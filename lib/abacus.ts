@@ -163,10 +163,14 @@ export function evaluatePrinciples(input: AbacusInput): PrincipleResult[] {
       status = 'CAUTION';
       headline = `Williams %R ${williamsR.toFixed(0)} — Neutral zone, ${williamsRTrend}`;
       detail = 'Between -40 and -80. Watch for a push toward -90 (portfolio entry) or rising through -40 (swing trigger).';
+    } else if (williamsR <= -20) {
+      status = 'CAUTION';
+      headline = `Williams %R ${williamsR.toFixed(0)} — Neutral-bullish, ${williamsRTrend}`;
+      detail = 'Between -20 and -40: not yet a Principio VII trigger. Watch for a rise through -40 or a pullback toward -80/-90.';
     } else {
       status = 'FAIL';
       headline = `Williams %R ${williamsR.toFixed(0)} — Overbought`;
-      detail = 'Above -40: overbought. Not an entry by Principio VII. Wait for a pullback toward -80 or -90.';
+      detail = 'Above -20: overbought per standard Williams %R. Not a Principio VII entry. Wait for a pullback toward -80 or -90.';
     }
 
     return { id: 7, name: 'Williams %R', nameEs: 'Williams %R', status, headline, detail };
