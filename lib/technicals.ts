@@ -92,12 +92,15 @@ export function computeTechnicals(
   // Crossing -40 upward: recently below -50, now above -45
   const williamsRCrossing40 = wrMinus7 < -50 && wrCurrent > -45 && wrCurrent < -30;
 
-  // Fibonacci Golden Zone from 52-week high/low
-  const high = quote.yearHigh;
-  const low = quote.yearLow;
-  const range = high - low;
-  const fibGoldenZoneHigh = high - range * 0.618; // 61.8% retracement (shallower)
-  const fibGoldenZoneLow = high - range * 0.786;  // 78.6% retracement (deeper)
+  // Fibonacci Golden Zone — anchor to last 6 months (126 bars) so the swing
+  // points reflect the current trend leg rather than stale 52-week extremes.
+  const recent = history.slice(-Math.min(126, n));
+  const swingHigh = Math.max(...recent.map(d => d.high));
+  const swingLow  = Math.min(...recent.map(d => d.low));
+  const range = swingHigh - swingLow;
+  // Golden pocket: 61.8%–65% retracement (not 78.6%, which is a separate deep zone)
+  const fibGoldenZoneHigh = swingHigh - range * 0.618;
+  const fibGoldenZoneLow  = swingHigh - range * 0.650;
   const price = quote.price;
   const inFibGoldenZone = price >= fibGoldenZoneLow && price <= fibGoldenZoneHigh;
 

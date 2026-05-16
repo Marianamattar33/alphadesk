@@ -194,22 +194,23 @@ export function wrTip(wr: number, trend: string, crossing40: boolean): TipConten
 
 export function fibTip(low: number, high: number, inZone: boolean): TipContent {
   return {
-    title: 'Fibonacci Golden Zone (61.8%–78.6%)',
+    title: 'Fibonacci Golden Pocket (61.8%–65%)',
     lines: [
-      { label: 'Formula', value: '52-week range retracement: 61.8% and 78.6% levels' },
-      { label: 'Zone',    value: `$${low.toFixed(2)} – $${high.toFixed(2)}` },
-      { label: 'Source',  value: 'FMP /quote — yearHigh / yearLow' },
+      { label: 'Formula', value: '6-month swing high − range × 0.618 / 0.650' },
+      { label: 'Zone',    value: `$${high.toFixed(2)} – $${low.toFixed(2)}` },
+      { label: 'Source',  value: 'FMP /historical-price-full — highest high / lowest low, trailing 126 bars' },
+      { label: 'Note',    value: '78.6% is a separate deep retracement level, not part of the golden pocket' },
     ],
     verdicts: [
-      { color: 'green', text: 'Price inside zone — deep retracement, high-probability entry area' },
+      { color: 'green', text: 'Price inside zone — golden pocket, high-probability pullback entry' },
       { color: 'gold',  text: 'Price outside zone — wait for pullback toward 61.8%' },
     ],
     current: {
       text: inZone ? 'Inside zone' : 'Outside zone',
       verdict: inZone ? 'green' : 'gold',
       interpretation: inZone
-        ? 'price is in the 61.8%–78.6% Fibonacci retracement zone'
-        : 'not yet in the golden zone; no Fib entry signal',
+        ? 'price is in the 61.8%–65% Fibonacci golden pocket'
+        : 'not yet in the golden pocket; no Fib entry signal',
     },
   };
 }
