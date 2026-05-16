@@ -355,7 +355,7 @@ export function projectedNITip(revenue: number, ni: number): TipContent {
   return {
     title: '⑥ Projected Revenue & Net Income',
     lines: [
-      { label: 'Revenue',  value: 'Latest revenue × (1 + growth rate); rate = 3yr CAGR or YoY' },
+      { label: 'Revenue',  value: 'Latest revenue × (1 + growth rate); rate = min(YoY, 3yr CAGR) — conservative choice when the two diverge' },
       { label: 'Net Inc.', value: 'Projected revenue × 4-year avg net margin (step ④)' },
       { label: 'Source',   value: 'FMP /income-statement (last 4 annual periods)' },
     ],

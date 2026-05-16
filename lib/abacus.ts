@@ -225,7 +225,8 @@ export function computeValuation(input: AbacusInput): ValuationSteps {
   const avgPE6m = ttmEps > 0 ? technicals.avgClose6m / ttmEps : null;
 
   // Step 6: Projected Net Income = projected revenue × avg margin
-  const growthRate = cagr3y !== null ? cagr3y / 100 : yoy / 100;
+  // Use the lower of YoY and 3yr CAGR — conservative when the two diverge.
+  const growthRate = cagr3y !== null ? Math.min(cagr3y, yoy) / 100 : yoy / 100;
   const projectedRevenue = latest ? latest.revenue * (1 + growthRate) : 0;
   const projectedNI = projectedRevenue * (avgMargin / 100);
 
