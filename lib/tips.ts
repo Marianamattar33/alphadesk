@@ -385,7 +385,7 @@ export function avgPE6mTip(val: number | null): TipContent {
     lines: [
       { label: 'Formula', value: '6-month avg closing price ÷ trailing diluted EPS' },
       { label: 'Source',  value: 'FMP /historical-price-full (126 trading days) + /income-statement' },
-      { label: 'Note',    value: 'Approximation — YCharts or Bloomberg for precise 6m avg P/E' },
+      { label: 'Note',    value: 'Approximation: uses current TTM EPS rather than rolling TTM EPS across the 6-month window. Methodology differs from YCharts/Bloomberg, which compute daily P/E using point-in-time TTM EPS and then average those values. Differences are usually small but can grow after a sharp earnings beat or miss.' },
     ],
     current: val !== null ? {
       text: `${val.toFixed(1)}×`,
