@@ -256,19 +256,13 @@ export function peTip(pe: number | null, epsSource: 'ttm' | 'annual-fallback' = 
 }
 
 export function cashRunwayTip(months: number, debtToCapital: number, fcfPositive: boolean, ttmFcf: number | null): TipContent {
-  const highDebt = debtToCapital > 60;
-  const sharedLines = [
-    { label: 'Debt/Cap', value: 'Total debt ÷ (total debt + equity) × 100' },
-    { label: 'Note',     value: 'For FCF-positive companies, runway is replaced with a self-funding indicator — runway only makes sense for cash-burning businesses.' },
-  ];
-
   if (fcfPositive && ttmFcf !== null) {
     return {
       title: '② Cash Position & Free Cash Flow',
       lines: [
-        { label: 'FCF TTM',  value: 'Sum of freeCashFlow from last 4 quarterly cash flow statements' },
-        { label: 'Source',   value: 'FMP /cash-flow-statement?period=quarter + /balance-sheet-statement' },
-        ...sharedLines,
+        { label: 'FCF TTM', value: 'Sum of freeCashFlow from last 4 quarterly cash flow statements' },
+        { label: 'Source',  value: 'FMP /cash-flow-statement?period=quarter + /balance-sheet-statement' },
+        { label: 'Note',    value: 'FCF-positive companies are self-funding; runway only applies to cash-burning businesses.' },
       ],
       verdicts: [
         { color: 'green', text: 'FCF > 0 — self-funding; generates more cash than it spends' },
@@ -277,31 +271,55 @@ export function cashRunwayTip(months: number, debtToCapital: number, fcfPositive
       current: {
         text: `${fmtB(ttmFcf)} FCF TTM`,
         verdict: 'green',
-        interpretation: `self-funding${highDebt ? `; debt/cap ${debtToCapital.toFixed(0)}% elevated` : ''}`,
+        interpretation: 'generates more cash than it spends',
       },
     };
   }
 
   let verdict: VerdictColor;
   let interp: string;
-  if (months < 12)      { verdict = 'red';   interp = `capital risk${highDebt ? '; high debt load' : ''}`; }
-  else if (months < 24) { verdict = 'gold';  interp = `adequate runway${highDebt ? '; debt/cap elevated' : ''}`; }
-  else                  { verdict = 'green'; interp = `solid runway${highDebt ? `; debt/cap ${debtToCapital.toFixed(0)}% elevated` : ''}`; }
+  if (months < 12)      { verdict = 'red';   interp = 'capital risk — < 12 months'; }
+  else if (months < 24) { verdict = 'gold';  interp = 'adequate runway — 12–24 months'; }
+  else                  { verdict = 'green'; interp = 'solid runway — ≥ 24 months'; }
 
   return {
-    title: '② Cash Runway & Debt Load',
+    title: '② Cash Runway',
     lines: [
-      { label: 'Runway',  value: 'Cash & equivalents ÷ (annual operating expenses ÷ 12)' },
+      { label: 'Formula', value: 'Cash & equivalents ÷ (annual operating expenses ÷ 12)' },
       { label: 'Source',  value: 'FMP /balance-sheet-statement (latest annual)' },
-      ...sharedLines,
     ],
     verdicts: [
-      { color: 'green', text: '≥ 24 months runway — financially secure' },
+      { color: 'green', text: '≥ 24 months — financially secure' },
       { color: 'gold',  text: '12–24 months — adequate; watch refinancing risk' },
       { color: 'red',   text: '< 12 months — capital risk; avoid unless turning profitable' },
     ],
     current: {
       text: months > 200 ? '>200 months' : `${months.toFixed(0)} months`,
+      verdict,
+      interpretation: interp,
+    },
+  };
+}
+
+export function debtToCapTip(debtToCapital: number): TipContent {
+  let verdict: VerdictColor;
+  let interp: string;
+  if (debtToCapital < 30)       { verdict = 'green'; interp = 'low leverage — < 30%'; }
+  else if (debtToCapital <= 50) { verdict = 'gold';  interp = 'moderate leverage — 30–50%'; }
+  else                          { verdict = 'red';   interp = 'high leverage — > 50%'; }
+  return {
+    title: '② Debt/Capital Ratio',
+    lines: [
+      { label: 'Formula', value: 'Total debt ÷ (total debt + equity) × 100' },
+      { label: 'Source',  value: 'FMP /balance-sheet-statement (latest annual)' },
+    ],
+    verdicts: [
+      { color: 'green', text: '< 30% — low leverage; minimal financial risk' },
+      { color: 'gold',  text: '30–50% — moderate leverage; manageable at healthy margins' },
+      { color: 'red',   text: '> 50% — high leverage; elevated refinancing and solvency risk' },
+    ],
+    current: {
+      text: `${debtToCapital.toFixed(1)}%`,
       verdict,
       interpretation: interp,
     },

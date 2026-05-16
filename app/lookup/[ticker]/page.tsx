@@ -9,7 +9,7 @@ import type { PrincipleResult, ValuationSteps } from '@/types/lookup';
 import {
   marketCapTip, range52wTip, volumeTip, betaTip,
   sma50Tip, sma200Tip, ema50Tip, rsiTip, wrTip, fibTip,
-  peTip, cashRunwayTip, salesGrowthTip, avgMarginTip,
+  peTip, cashRunwayTip, debtToCapTip, salesGrowthTip, avgMarginTip,
   avgPE6mTip, projectedNITip, futureMktCapTip, possibleReturnTip,
   consensusTargetTip, targetHighTip, targetLowTip, upsideTip,
   nextReportTip, lastReportTip, epsActualEstTip,
@@ -82,14 +82,14 @@ function PrincipleCard({ p }: { p: PrincipleResult }) {
   );
 }
 
-function ValuationRow({ label, value, note, tip }: { label: string; value: string; note?: string; tip?: TipContent }) {
+function ValuationRow({ label, value, note, tip, valueColor }: { label: string; value: string; note?: string; tip?: TipContent; valueColor?: string }) {
   return (
     <div className="flex items-baseline justify-between gap-4 py-1.5" style={{ borderBottom: '1px solid var(--border)' }}>
       <span className="inline-flex items-center text-xs" style={{ color: 'var(--text-muted)' }}>
         {label}
         {tip && <InfoTip tip={tip} />}
       </span>
-      <span className="text-xs font-mono font-semibold text-right" style={{ color: 'var(--text)', fontFamily: 'var(--font-mono)' }}>
+      <span className="text-xs font-mono font-semibold text-right" style={{ color: valueColor ?? 'var(--text)', fontFamily: 'var(--font-mono)' }}>
         {value}
         {note && <span className="ml-1 text-[10px] opacity-50">{note}</span>}
       </span>
@@ -308,10 +308,16 @@ export default async function LookupPage({ params }: { params: Promise<{ ticker:
           value={v.cashRunway.fcfPositive
             ? 'FCF-positive'
             : v.cashRunway.months > 200 ? '>200 months' : `${v.cashRunway.months.toFixed(0)} months`}
-          note={v.cashRunway.fcfPositive
-            ? (v.cashRunway.ttmFcf !== null ? `FCF: ${fmtB(v.cashRunway.ttmFcf)} TTM` : undefined)
-            : `Debt/Cap: ${v.cashRunway.debtToCapital.toFixed(1)}%`}
+          note={v.cashRunway.fcfPositive && v.cashRunway.ttmFcf !== null
+            ? `FCF: ${fmtB(v.cashRunway.ttmFcf)} TTM`
+            : undefined}
           tip={cashRunwayTip(v.cashRunway.months, v.cashRunway.debtToCapital, v.cashRunway.fcfPositive, v.cashRunway.ttmFcf)}
+        />
+        <ValuationRow
+          label="② Debt/Capital"
+          value={`${v.cashRunway.debtToCapital.toFixed(1)}%`}
+          valueColor={v.cashRunway.debtToCapital < 30 ? '#34d399' : v.cashRunway.debtToCapital <= 50 ? '#d4a656' : '#f87171'}
+          tip={debtToCapTip(v.cashRunway.debtToCapital)}
         />
         <ValuationRow
           label="③ Revenue Growth YoY"
