@@ -71,6 +71,11 @@ export interface FMPBalanceSheet {
   totalStockholdersEquity: number;
 }
 
+export interface FMPCashFlowStatement {
+  date: string;
+  freeCashFlow: number;
+}
+
 export interface FMPPriceTarget {
   targetHigh: number;
   targetLow: number;
@@ -124,6 +129,10 @@ export async function fetchIncomeStatements(ticker: string, limit = 4): Promise<
 
 export async function fetchQuarterlyIncomeStatements(ticker: string, limit = 5): Promise<FMPIncomeStatement[]> {
   return fmpGet<FMPIncomeStatement[]>(`income-statement?symbol=${ticker}&period=quarter&limit=${limit}`);
+}
+
+export async function fetchQuarterlyCashFlowStatements(ticker: string, limit = 5): Promise<FMPCashFlowStatement[]> {
+  return fmpGet<FMPCashFlowStatement[]>(`cash-flow-statement?symbol=${ticker}&period=quarter&limit=${limit}`);
 }
 
 export async function fetchBalanceSheet(ticker: string): Promise<FMPBalanceSheet | null> {

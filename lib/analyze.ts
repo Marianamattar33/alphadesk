@@ -4,6 +4,7 @@ import {
   fetchHistoricalPrices,
   fetchIncomeStatements,
   fetchQuarterlyIncomeStatements,
+  fetchQuarterlyCashFlowStatements,
   fetchBalanceSheet,
   fetchPriceTargets,
   fetchEarnings,
@@ -16,13 +17,14 @@ import type { StockAnalysis } from '@/types/lookup';
 export async function analyzeTicker(ticker: string): Promise<StockAnalysis> {
   const t = ticker.toUpperCase().trim().replace(/\./g, '-'); // BRK.B → BRK-B (FMP uses hyphens)
 
-  const [quote, profile, history, income, quarterlyIncome, balance, targets, earnings, newsRaw] =
+  const [quote, profile, history, income, quarterlyIncome, quarterlyCashFlow, balance, targets, earnings, newsRaw] =
     await Promise.all([
       fetchQuote(t),
       fetchProfile(t),
       fetchHistoricalPrices(t, 252),
       fetchIncomeStatements(t, 4),
       fetchQuarterlyIncomeStatements(t, 5),
+      fetchQuarterlyCashFlowStatements(t, 5).catch(() => []),
       fetchBalanceSheet(t),
       fetchPriceTargets(t),
       fetchEarnings(t),
@@ -33,7 +35,7 @@ export async function analyzeTicker(ticker: string): Promise<StockAnalysis> {
 
   const technicals = computeTechnicals(history, quote);
 
-  const abacusInput = { quote, technicals, income, quarterlyIncome, balance, targets };
+  const abacusInput = { quote, technicals, income, quarterlyIncome, quarterlyCashFlow, balance, targets };
   const principles = evaluatePrinciples(abacusInput);
   const valuation = computeValuation(abacusInput);
 

@@ -11,7 +11,7 @@ export interface PrincipleResult {
 
 export interface ValuationSteps {
   pe: { value: number | null; category: 'conservative' | 'sweet-spot' | 'high-risk' | 'negative' | 'na'; epsSource: 'ttm' | 'annual-fallback' };
-  cashRunway: { months: number; debtToCapital: number };
+  cashRunway: { months: number; debtToCapital: number; ttmFcf: number | null; fcfPositive: boolean };
   salesGrowth: { yoy: number; cagr3y: number | null; phase: string };
   avgMargin: { value: number };
   avgPE6m: { value: number | null; note: string };

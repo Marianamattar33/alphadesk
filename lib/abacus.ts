@@ -1,12 +1,13 @@
-import type { FMPQuote, FMPIncomeStatement, FMPBalanceSheet, FMPPriceTarget } from './fmp';
+import type { FMPQuote, FMPIncomeStatement, FMPBalanceSheet, FMPPriceTarget, FMPCashFlowStatement } from './fmp';
 import type { Technicals } from './technicals';
 import type { PrincipleResult, ValuationSteps } from '@/types/lookup';
 
 interface AbacusInput {
   quote: FMPQuote;
   technicals: Technicals;
-  income: FMPIncomeStatement[];          // annual, newest-first
-  quarterlyIncome: FMPIncomeStatement[]; // quarterly, newest-first
+  income: FMPIncomeStatement[];               // annual, newest-first
+  quarterlyIncome: FMPIncomeStatement[];      // quarterly, newest-first
+  quarterlyCashFlow: FMPCashFlowStatement[];  // quarterly, newest-first
   balance: FMPBalanceSheet | null;
   targets: FMPPriceTarget | null;
 }
@@ -182,7 +183,7 @@ export function evaluatePrinciples(input: AbacusInput): PrincipleResult[] {
 // ─── 8-STEP VALUATION ───────────────────────────────────────────────────────
 
 export function computeValuation(input: AbacusInput): ValuationSteps {
-  const { quote, technicals, income, quarterlyIncome, balance } = input;
+  const { quote, technicals, income, quarterlyIncome, quarterlyCashFlow, balance } = input;
   const price = quote.price;
   const latest = income[0];
   const prev = income[1];
@@ -196,13 +197,17 @@ export function computeValuation(input: AbacusInput): ValuationSteps {
     : pe === null ? 'na'
     : pe < 20 ? 'conservative' : pe <= 39 ? 'sweet-spot' : 'high-risk';
 
-  // Step 2: Cash runway + debt/capital
+  // Step 2: Cash runway + debt/capital + TTM FCF
   const cash = balance?.cashAndCashEquivalents ?? 0;
   const debt = balance?.totalDebt ?? 0;
   const equity = balance?.totalStockholdersEquity ?? 1;
   const monthlyOpEx = latest ? latest.operatingExpenses / 12 : 1;
   const cashRunwayMonths = monthlyOpEx > 0 ? cash / monthlyOpEx : 999;
   const debtToCapital = debt + equity > 0 ? (debt / (debt + equity)) * 100 : 0;
+  const ttmFcf = quarterlyCashFlow.length >= 4
+    ? quarterlyCashFlow.slice(0, 4).reduce((sum, q) => sum + (q.freeCashFlow ?? 0), 0)
+    : null;
+  const fcfPositive = ttmFcf !== null && ttmFcf > 0;
 
   // Step 3: Sales growth (annual — correct; revenue CAGR uses annual fiscal years)
   const yoy = latest && prev && prev.revenue > 0
@@ -241,7 +246,7 @@ export function computeValuation(input: AbacusInput): ValuationSteps {
 
   return {
     pe: { value: pe, category: peCategory, epsSource },
-    cashRunway: { months: cashRunwayMonths, debtToCapital },
+    cashRunway: { months: cashRunwayMonths, debtToCapital, ttmFcf, fcfPositive },
     salesGrowth: { yoy, cagr3y, phase },
     avgMargin: { value: avgMargin },
     avgPE6m: {

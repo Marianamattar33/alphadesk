@@ -305,9 +305,13 @@ export default async function LookupPage({ params }: { params: Promise<{ ticker:
         />
         <ValuationRow
           label="② Cash Runway"
-          value={v.cashRunway.months > 200 ? '>200 months' : `${v.cashRunway.months.toFixed(0)} months`}
-          note={`Debt/Cap: ${v.cashRunway.debtToCapital.toFixed(1)}%`}
-          tip={cashRunwayTip(v.cashRunway.months, v.cashRunway.debtToCapital)}
+          value={v.cashRunway.fcfPositive
+            ? 'FCF-positive'
+            : v.cashRunway.months > 200 ? '>200 months' : `${v.cashRunway.months.toFixed(0)} months`}
+          note={v.cashRunway.fcfPositive
+            ? (v.cashRunway.ttmFcf !== null ? `FCF: ${fmtB(v.cashRunway.ttmFcf)} TTM` : undefined)
+            : `Debt/Cap: ${v.cashRunway.debtToCapital.toFixed(1)}%`}
+          tip={cashRunwayTip(v.cashRunway.months, v.cashRunway.debtToCapital, v.cashRunway.fcfPositive, v.cashRunway.ttmFcf)}
         />
         <ValuationRow
           label="③ Revenue Growth YoY"

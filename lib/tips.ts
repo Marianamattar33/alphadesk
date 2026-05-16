@@ -255,19 +255,45 @@ export function peTip(pe: number | null, epsSource: 'ttm' | 'annual-fallback' = 
   };
 }
 
-export function cashRunwayTip(months: number, debtToCapital: number): TipContent {
+export function cashRunwayTip(months: number, debtToCapital: number, fcfPositive: boolean, ttmFcf: number | null): TipContent {
   const highDebt = debtToCapital > 60;
+  const sharedLines = [
+    { label: 'Debt/Cap', value: 'Total debt ÷ (total debt + equity) × 100' },
+    { label: 'Note',     value: 'For FCF-positive companies, runway is replaced with a self-funding indicator — runway only makes sense for cash-burning businesses.' },
+  ];
+
+  if (fcfPositive && ttmFcf !== null) {
+    return {
+      title: '② Cash Position & Free Cash Flow',
+      lines: [
+        { label: 'FCF TTM',  value: 'Sum of freeCashFlow from last 4 quarterly cash flow statements' },
+        { label: 'Source',   value: 'FMP /cash-flow-statement?period=quarter + /balance-sheet-statement' },
+        ...sharedLines,
+      ],
+      verdicts: [
+        { color: 'green', text: 'FCF > 0 — self-funding; generates more cash than it spends' },
+        { color: 'red',   text: 'FCF ≤ 0 — cash-burning; runway calculation applies instead' },
+      ],
+      current: {
+        text: `${fmtB(ttmFcf)} FCF TTM`,
+        verdict: 'green',
+        interpretation: `self-funding${highDebt ? `; debt/cap ${debtToCapital.toFixed(0)}% elevated` : ''}`,
+      },
+    };
+  }
+
   let verdict: VerdictColor;
   let interp: string;
-  if (months < 12)       { verdict = 'red';   interp = `capital risk${highDebt ? '; high debt load' : ''}`; }
-  else if (months < 24)  { verdict = 'gold';  interp = `adequate runway${highDebt ? '; debt/cap elevated' : ''}`; }
-  else                   { verdict = 'green'; interp = `solid runway${highDebt ? `; debt/cap ${debtToCapital.toFixed(0)}% elevated` : ''}`; }
+  if (months < 12)      { verdict = 'red';   interp = `capital risk${highDebt ? '; high debt load' : ''}`; }
+  else if (months < 24) { verdict = 'gold';  interp = `adequate runway${highDebt ? '; debt/cap elevated' : ''}`; }
+  else                  { verdict = 'green'; interp = `solid runway${highDebt ? `; debt/cap ${debtToCapital.toFixed(0)}% elevated` : ''}`; }
+
   return {
     title: '② Cash Runway & Debt Load',
     lines: [
-      { label: 'Runway',   value: 'Cash & equivalents ÷ (annual operating expenses ÷ 12)' },
-      { label: 'Debt/Cap', value: 'Total debt ÷ (total debt + equity) × 100' },
-      { label: 'Source',   value: 'FMP /balance-sheet-statement (latest annual)' },
+      { label: 'Runway',  value: 'Cash & equivalents ÷ (annual operating expenses ÷ 12)' },
+      { label: 'Source',  value: 'FMP /balance-sheet-statement (latest annual)' },
+      ...sharedLines,
     ],
     verdicts: [
       { color: 'green', text: '≥ 24 months runway — financially secure' },
