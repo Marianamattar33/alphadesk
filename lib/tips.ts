@@ -580,7 +580,7 @@ export function principleTip(p: PrincipleResult): TipContent {
       current,
     };
     case 2: return {
-      title: 'Principio II — Sales Growth',
+      title: 'Principio II — Revenue Growth Estimate',
       lines: p.status === 'MANUAL'
         ? [
             { label: 'Method', value: '(Next FY analyst estimate − TTM revenue) ÷ TTM revenue' },

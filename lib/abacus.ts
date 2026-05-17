@@ -78,7 +78,7 @@ export function evaluatePrinciples(input: AbacusInput): PrincipleResult[] {
 
     if (!nextYear || !ttmRevenue) {
       return {
-        id: 2, name: 'Sales Growth', nameEs: 'Crecimiento en Ventas',
+        id: 2, name: 'Revenue Growth Estimate', nameEs: 'Estimación de Crecimiento',
         status: 'MANUAL',
         headline: 'No analyst coverage — manual assessment required',
         detail: 'No analyst coverage available — manually assess forward revenue growth, or skip this principle for this stock.',
@@ -94,7 +94,7 @@ export function evaluatePrinciples(input: AbacusInput): PrincipleResult[] {
     else                          { phase = 'Declining'; status = 'FAIL'; }
 
     return {
-      id: 2, name: 'Sales Growth', nameEs: 'Crecimiento en Ventas',
+      id: 2, name: 'Revenue Growth Estimate', nameEs: 'Estimación de Crecimiento',
       status,
       headline: `${forwardGrowth >= 0 ? '+' : ''}${forwardGrowth.toFixed(1)}% forward growth — ${phase} phase`,
       detail: `Next FY est. $${(nextYear.revenueAvg / 1e9).toFixed(1)}B vs TTM $${(ttmRevenue / 1e9).toFixed(1)}B (${nextYear.numAnalystsRevenue} analysts). Principio II prefers Mature or Growth-Leader phase.`,
