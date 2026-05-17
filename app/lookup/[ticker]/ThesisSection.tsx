@@ -1,5 +1,6 @@
 import { generateThesis } from '@/lib/claude';
 import type { StockAnalysis } from '@/types/lookup';
+import Markdown from './Markdown';
 
 export default async function ThesisSection({ analysis }: { analysis: StockAnalysis }) {
   const thesis = await generateThesis(analysis);
@@ -14,22 +15,18 @@ export default async function ThesisSection({ analysis }: { analysis: StockAnaly
       </h2>
 
       <div className="space-y-1">
-        <p className="text-xs font-semibold uppercase tracking-wider" style={{ color: 'var(--text-muted)' }}>
+        <p className="text-xs font-semibold uppercase tracking-wider mb-2" style={{ color: 'var(--text-muted)' }}>
           Structural (3–10yr)
         </p>
-        <p className="text-sm leading-relaxed" style={{ color: 'var(--text)' }}>
-          {thesis.structural}
-        </p>
+        <Markdown>{thesis.structural}</Markdown>
       </div>
 
       {thesis.tactical && (
-        <div className="space-y-1 pt-2" style={{ borderTop: '1px solid var(--border)' }}>
-          <p className="text-xs font-semibold uppercase tracking-wider" style={{ color: 'var(--text-muted)' }}>
+        <div className="space-y-1 pt-3" style={{ borderTop: '1px solid var(--border)' }}>
+          <p className="text-xs font-semibold uppercase tracking-wider mb-2" style={{ color: 'var(--text-muted)' }}>
             Tactical Entry
           </p>
-          <p className="text-sm leading-relaxed" style={{ color: 'var(--text)' }}>
-            {thesis.tactical}
-          </p>
+          <Markdown>{thesis.tactical}</Markdown>
         </div>
       )}
     </div>

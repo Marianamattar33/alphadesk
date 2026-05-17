@@ -3,13 +3,16 @@ import type { StockAnalysis } from '@/types/lookup';
 
 const SYSTEM_PROMPT = `You are an institutional equity analyst advising a private investor who uses the Abacus investment framework. The framework has 7 Principles evaluated as PASS, CAUTION, FAIL, or MANUAL.
 
-Rules for your theses:
-- Reference Abacus principles by Roman numeral (Principio I–VII) when relevant
-- Be specific: use exact numbers from the data (P/E, Williams %R level, upside %, projected return)
-- Structural thesis: 3-4 sentences on the long-term (3-10yr) investment case, end with one key invalidation condition
-- Tactical thesis: 3-4 sentences on the current entry analysis based on the 7 Principles, say what would confirm or invalidate the setup
-- Do NOT start with "This company" or end with "In conclusion"
-- Write directly to the investor. Be concise and actionable.`;
+Rules:
+- Write directly to the investor. Be concise and actionable.
+- Use exact numbers from the data (price levels, %, P/E, Williams %R value).
+- Reference Abacus principles by Roman numeral (Principio I–VII).
+- Do NOT start with "This company" or end with "In conclusion".
+- Output valid markdown — bold, bullets, and horizontal rules only. No headers with #.
+
+Structural section: 2-3 sentences of flowing prose on the long-term (3-10yr) moat and compounding driver. End with a bolded Key risk line.
+
+Tactical section: structured markdown exactly as specified — Verdict (one-sentence headline call), then Passes/Fails/Watch as bullet lists, then Confirm and Kill as single bolded lines with specific price levels.`;
 
 function buildPrompt(a: StockAnalysis): string {
   const p = (id: number) => a.principles.find(x => x.id === id);
@@ -33,14 +36,32 @@ Data:
 - 8-step projected return: ${ret !== null ? `${ret >= 0 ? '+' : ''}${ret.toFixed(0)}%` : 'N/A (no analyst coverage)'} (based on projected NI × avg P/E)
 - Cash runway: ${a.valuation.cashRunway.months > 200 ? '>200 months (strong)' : a.valuation.cashRunway.months.toFixed(0) + ' months'} | Debt/Capital: ${a.valuation.cashRunway.debtToCapital.toFixed(1)}%
 
-Write two investment theses. Wrap each one in its XML tag exactly as shown:
+Write two investment theses. Wrap each one in its XML tag exactly as shown.
 
 <structural>
-[3-4 sentences on the long-term (3-10yr) structural case. End with one key invalidation condition.]
+[2-3 sentences of prose on the long-term moat and compounding driver.]
+
+**Key risk:** [specific failure condition — one line]
 </structural>
 
 <tactical>
-[3-4 sentences on the current entry setup using the 7 Principles. State what would confirm or kill the trade.]
+**Verdict:** [one-sentence headline call — what to do, not what is true]
+
+**Passes:**
+- [Principio I — upside % if applicable]
+- [Principio II — forward growth % if applicable]
+[omit any principle that does not apply]
+
+**Fails:**
+- [Principio III — price % vs SMA200 if applicable]
+- [Principio V — P/E if applicable]
+[omit any principle that does not apply]
+
+**Watch:**
+- [Principio VII — Williams %R value and trend]
+
+**Confirm:** [specific entry trigger with exact price level]
+**Kill:** [specific breakdown level with exact price level]
 </tactical>`;
 }
 
