@@ -60,8 +60,8 @@ function StatusBadge({ status }: { status: string }) {
 
 // ─── Sub-panels ──────────────────────────────────────────────────────────────
 
-function PrincipleCard({ p }: { p: PrincipleResult }) {
-  const tip = principleTip(p);
+function PrincipleCard({ p, analystCount }: { p: PrincipleResult; analystCount?: number | null }) {
+  const tip = principleTip(p, analystCount);
   return (
     <div
       className="rounded-xl p-4 space-y-2"
@@ -285,7 +285,7 @@ export default async function LookupPage({ params }: { params: Promise<{ ticker:
           7 Principles
         </h2>
         <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3">
-          {a.principles.map(p => <PrincipleCard key={p.id} p={p} />)}
+          {a.principles.map(p => <PrincipleCard key={p.id} p={p} analystCount={p.id === 1 ? a.priceTargetAnalystCount : undefined} />)}
         </div>
       </div>
 

@@ -111,6 +111,10 @@ export interface FMPAnalystEstimate {
   numAnalystsRevenue: number;
 }
 
+export interface FMPPriceTargetSummary {
+  lastMonthCount: number;
+}
+
 // ---------- Fetch functions ----------
 
 export async function fetchQuote(ticker: string): Promise<FMPQuote | null> {
@@ -162,6 +166,11 @@ export async function fetchNews(ticker: string, limit = 5): Promise<FMPNews[]> {
 
 export async function fetchAnalystEstimates(ticker: string, limit = 6): Promise<FMPAnalystEstimate[]> {
   return fmpGet<FMPAnalystEstimate[]>(`analyst-estimates?symbol=${ticker}&period=annual&limit=${limit}`);
+}
+
+export async function fetchPriceTargetSummary(ticker: string): Promise<FMPPriceTargetSummary | null> {
+  const data = await fmpGet<FMPPriceTargetSummary[]>(`price-target-summary?symbol=${ticker}`);
+  return data[0] ?? null;
 }
 
 const US_EXCHANGES = ['New York Stock Exchange', 'NASDAQ', 'NYSE'];

@@ -10,6 +10,7 @@ import {
   fetchEarnings,
   fetchNews,
   fetchAnalystEstimates,
+  fetchPriceTargetSummary,
 } from './fmp';
 import { computeTechnicals } from './technicals';
 import { evaluatePrinciples, computeValuation } from './abacus';
@@ -18,7 +19,7 @@ import type { StockAnalysis } from '@/types/lookup';
 export async function analyzeTicker(ticker: string): Promise<StockAnalysis> {
   const t = ticker.toUpperCase().trim().replace(/\./g, '-'); // BRK.B → BRK-B (FMP uses hyphens)
 
-  const [quote, profile, history, income, quarterlyIncome, quarterlyCashFlow, balance, targets, earnings, newsRaw, analystEstimates] =
+  const [quote, profile, history, income, quarterlyIncome, quarterlyCashFlow, balance, targets, earnings, newsRaw, analystEstimates, targetSummary] =
     await Promise.all([
       fetchQuote(t),
       fetchProfile(t),
@@ -31,6 +32,7 @@ export async function analyzeTicker(ticker: string): Promise<StockAnalysis> {
       fetchEarnings(t),
       fetchNews(t, 5),
       fetchAnalystEstimates(t).catch(() => []),
+      fetchPriceTargetSummary(t).catch(() => null),
     ]);
 
   if (!quote) throw new Error(`Ticker not found: ${t}`);
@@ -114,6 +116,7 @@ export async function analyzeTicker(ticker: string): Promise<StockAnalysis> {
     priceTargetHigh: targets?.targetHigh ?? null,
     priceTargetLow: targets?.targetLow ?? null,
     upsideToConsensus,
+    priceTargetAnalystCount: targetSummary?.lastMonthCount ?? null,
 
     principles,
     valuation,

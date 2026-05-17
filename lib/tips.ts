@@ -557,7 +557,7 @@ export function epsActualEstTip(actual: number | null, estimated: number | null)
 
 // ─── 7 Principles ─────────────────────────────────────────────────────────────
 
-export function principleTip(p: PrincipleResult): TipContent {
+export function principleTip(p: PrincipleResult, analystCount?: number | null): TipContent {
   const current: TipCurrent = {
     text: p.status,
     verdict: statusVerdict(p.status),
@@ -569,13 +569,14 @@ export function principleTip(p: PrincipleResult): TipContent {
       title: 'Principio I — Price Target',
       lines: [
         { label: 'Formula',     value: '(Consensus target − price) ÷ price × 100' },
-        { label: 'Source',      value: 'FMP /price-target-consensus' },
+        { label: 'Source',      value: 'FMP /price-target-consensus (mean of analyst targets)' },
+        { label: 'Analysts',    value: analystCount != null ? `${analystCount} contributing to consensus (last 30 days)` : 'Count unavailable' },
         { label: 'Principio I', value: 'Requires ≥ 20% upside for a strong portfolio entry' },
       ],
       verdicts: [
         { color: 'green', text: '≥ 20% upside — PASS' },
         { color: 'gold',  text: '5–20% upside — CAUTION; some upside, not ideal' },
-        { color: 'red',   text: '< 5% upside — FAIL; not an entry' },
+        { color: 'red',   text: '< 5% upside (or downside) — FAIL; not an entry' },
       ],
       current,
     };

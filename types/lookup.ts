@@ -70,6 +70,7 @@ export interface StockAnalysis {
   priceTargetHigh: number | null;
   priceTargetLow: number | null;
   upsideToConsensus: number | null;
+  priceTargetAnalystCount: number | null;
 
   // Framework
   principles: PrincipleResult[];
