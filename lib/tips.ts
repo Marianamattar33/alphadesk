@@ -326,32 +326,22 @@ export function debtToCapTip(debtToCapital: number): TipContent {
   };
 }
 
-export function salesGrowthTip(yoy: number, cagr3y: number | null, phase: string): TipContent {
-  let verdict: VerdictColor;
-  if (yoy > 20)      verdict = 'green';
-  else if (yoy >= 5) verdict = 'green';
-  else if (yoy >= 0) verdict = 'gold';
-  else               verdict = 'red';
-  const cagrStr = cagr3y !== null
-    ? ` | 3yr CAGR: ${cagr3y >= 0 ? '+' : ''}${cagr3y.toFixed(1)}%`
-    : '';
+export function currentYearRevEstTip(rev: number | null, numAnalysts: number): TipContent {
   return {
-    title: '③ Revenue Growth — Principio II',
+    title: '③ Current Year Revenue Estimate',
     lines: [
-      { label: 'YoY',     value: '(Latest revenue − prior year revenue) ÷ prior year revenue' },
-      { label: '3yr CAGR', value: '(Latest revenue ÷ 3-yr-ago revenue)^(1/3) − 1' },
-      { label: 'Source',  value: 'FMP /income-statement (last 4 annual periods)' },
+      { label: 'Source',  value: 'FMP /analyst-estimates (annual consensus, current fiscal year)' },
+      { label: 'Used in', value: 'Step ⑥ as the revenue base for projected net income' },
+      { label: 'Analysts', value: numAnalysts > 0 ? `${numAnalysts} analysts contributing to consensus` : 'Analyst count unavailable' },
     ],
-    verdicts: [
-      { color: 'green', text: '> 20% YoY — Growth-Leader phase' },
-      { color: 'green', text: '5–20% YoY — Mature phase (solid business)' },
-      { color: 'gold',  text: '0–5% — Slow Growth; acceptable in value plays' },
-      { color: 'red',   text: '< 0% — Declining; requires strong P/E discount' },
-    ],
-    current: {
-      text: `${yoy >= 0 ? '+' : ''}${yoy.toFixed(1)}% YoY${cagrStr}`,
-      verdict,
-      interpretation: `${phase} phase`,
+    current: rev !== null ? {
+      text: fmtB(rev),
+      verdict: 'gold',
+      interpretation: 'consensus estimate for current fiscal year',
+    } : {
+      text: 'N/A',
+      verdict: 'gray',
+      interpretation: 'No analyst coverage — forward valuation chain N/A for this stock',
     },
   };
 }
@@ -395,18 +385,22 @@ export function avgPE6mTip(val: number | null): TipContent {
   };
 }
 
-export function projectedNITip(revenue: number, ni: number): TipContent {
+export function projectedNITip(revenue: number | null, ni: number | null): TipContent {
   return {
     title: '⑥ Projected Revenue & Net Income',
     lines: [
-      { label: 'Revenue',  value: 'Latest revenue × (1 + growth rate); rate = min(YoY, 3yr CAGR) — conservative choice when the two diverge' },
-      { label: 'Net Inc.', value: 'Projected revenue × 4-year avg net margin (step ④)' },
-      { label: 'Source',   value: 'FMP /income-statement (last 4 annual periods)' },
+      { label: 'Revenue',  value: 'Current year analyst revenue estimate avg (step ③)' },
+      { label: 'Net Inc.', value: 'Current year revenue estimate × 4-year avg net margin (step ④)' },
+      { label: 'Source',   value: 'FMP /analyst-estimates + /income-statement (last 4 annual periods)' },
     ],
-    current: {
+    current: revenue !== null && ni !== null ? {
       text: `${fmtB(revenue)} rev → ${fmtB(ni)} NI`,
       verdict: ni > 0 ? 'green' : 'red',
       interpretation: ni > 0 ? 'profitable projection' : 'projected net loss',
+    } : {
+      text: 'N/A',
+      verdict: 'gray',
+      interpretation: 'No analyst coverage — forward chain unavailable',
     },
   };
 }
@@ -421,13 +415,16 @@ export const futureMktCapTip: TipContent = {
   ],
 };
 
-export function possibleReturnTip(pct: number): TipContent {
-  let verdict: VerdictColor;
-  let interp: string;
-  if (pct >= 50)      { verdict = 'green'; interp = 'high potential return (≥ 50%)'; }
-  else if (pct >= 20) { verdict = 'green'; interp = 'strong potential return — meets Principio I threshold'; }
-  else if (pct >= 0)  { verdict = 'gold';  interp = 'modest potential return (< 20%)'; }
-  else                { verdict = 'red';   interp = 'model projects downside from current price'; }
+export function possibleReturnTip(pct: number | null): TipContent {
+  const current = pct !== null ? (() => {
+    let verdict: VerdictColor;
+    let interp: string;
+    if (pct >= 50)      { verdict = 'green'; interp = 'high potential return (≥ 50%)'; }
+    else if (pct >= 20) { verdict = 'green'; interp = 'strong potential return — meets Principio I threshold'; }
+    else if (pct >= 0)  { verdict = 'gold';  interp = 'modest potential return (< 20%)'; }
+    else                { verdict = 'red';   interp = 'model projects downside from current price'; }
+    return { text: `${pct >= 0 ? '+' : ''}${pct.toFixed(0)}%`, verdict, interpretation: interp };
+  })() : { text: 'N/A', verdict: 'gray' as VerdictColor, interpretation: 'No analyst coverage — forward chain unavailable' };
   return {
     title: '⑧ Possible Return (8-Step Model)',
     lines: [
@@ -441,11 +438,7 @@ export function possibleReturnTip(pct: number): TipContent {
       { color: 'gold',  text: '0–20% — modest; does not clear the 20% upside hurdle' },
       { color: 'red',   text: '< 0% — model projects decline from current price' },
     ],
-    current: {
-      text: `${pct >= 0 ? '+' : ''}${pct.toFixed(0)}%`,
-      verdict,
-      interpretation: interp,
-    },
+    current,
   };
 }
 
@@ -586,13 +579,19 @@ export function principleTip(p: PrincipleResult): TipContent {
     };
     case 2: return {
       title: 'Principio II — Sales Growth',
-      lines: [
-        { label: 'Formula', value: '(Latest revenue − prior year revenue) ÷ prior year revenue' },
-        { label: 'Source',  value: 'FMP /income-statement (last 4 annual periods)' },
-      ],
+      lines: p.status === 'MANUAL'
+        ? [
+            { label: 'Method', value: '(Next FY analyst estimate − TTM revenue) ÷ TTM revenue' },
+            { label: 'Note',   value: 'No analyst coverage available — manually assess forward revenue growth, or skip this principle for this stock.' },
+          ]
+        : [
+            { label: 'Formula', value: '(Next FY analyst estimate − TTM revenue) ÷ TTM revenue' },
+            { label: 'Source',  value: 'FMP /analyst-estimates (next fiscal year avg) + /income-statement (last 4 quarters)' },
+            { label: 'TTM Rev', value: 'Sum of last 4 quarterly revenue figures' },
+          ],
       verdicts: [
-        { color: 'green', text: '> 20% YoY — Growth-Leader (PASS)' },
-        { color: 'green', text: '5–20% YoY — Mature phase (PASS)' },
+        { color: 'green', text: '> 20% forward growth — Growth-Leader (PASS)' },
+        { color: 'green', text: '5–20% — Mature phase (PASS)' },
         { color: 'gold',  text: '0–5% — Slow Growth (CAUTION)' },
         { color: 'red',   text: '< 0% — Declining (FAIL)' },
       ],

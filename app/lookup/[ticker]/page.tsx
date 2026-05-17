@@ -9,7 +9,7 @@ import type { PrincipleResult, ValuationSteps } from '@/types/lookup';
 import {
   marketCapTip, range52wTip, volumeTip, betaTip,
   sma50Tip, sma200Tip, ema50Tip, rsiTip, wrTip, fibTip,
-  peTip, cashRunwayTip, debtToCapTip, salesGrowthTip, avgMarginTip,
+  peTip, cashRunwayTip, debtToCapTip, currentYearRevEstTip, avgMarginTip,
   avgPE6mTip, projectedNITip, futureMktCapTip, possibleReturnTip,
   consensusTargetTip, targetHighTip, targetLowTip, upsideTip,
   nextReportTip, lastReportTip, epsActualEstTip,
@@ -320,10 +320,12 @@ export default async function LookupPage({ params }: { params: Promise<{ ticker:
           tip={debtToCapTip(v.cashRunway.debtToCapital)}
         />
         <ValuationRow
-          label="③ Revenue Growth YoY"
-          value={`${v.salesGrowth.yoy >= 0 ? '+' : ''}${fmt(v.salesGrowth.yoy, 1)}%`}
-          note={v.salesGrowth.cagr3y !== null ? `3yr CAGR: ${v.salesGrowth.cagr3y.toFixed(1)}%` : undefined}
-          tip={salesGrowthTip(v.salesGrowth.yoy, v.salesGrowth.cagr3y, v.salesGrowth.phase)}
+          label="③ Current Year Revenue Est."
+          value={v.salesGrowth.currentYearRevenue !== null ? fmtB(v.salesGrowth.currentYearRevenue) : 'N/A'}
+          note={v.salesGrowth.currentYearRevenue !== null
+            ? `${v.salesGrowth.numAnalysts} analysts`
+            : 'No analyst coverage — forward valuation chain N/A for this stock'}
+          tip={currentYearRevEstTip(v.salesGrowth.currentYearRevenue, v.salesGrowth.numAnalysts)}
         />
         <ValuationRow
           label="④ Avg Net Margin (4yr)"
@@ -338,13 +340,13 @@ export default async function LookupPage({ params }: { params: Promise<{ ticker:
         />
         <ValuationRow
           label="⑥ Projected Revenue"
-          value={fmtB(v.projectedNI.revenue)}
-          note={`→ NI: ${fmtB(v.projectedNI.netIncome)}`}
+          value={v.projectedNI.revenue !== null ? fmtB(v.projectedNI.revenue) : 'N/A'}
+          note={v.projectedNI.netIncome !== null ? `→ NI: ${fmtB(v.projectedNI.netIncome)}` : undefined}
           tip={projectedNITip(v.projectedNI.revenue, v.projectedNI.netIncome)}
         />
         <ValuationRow
           label="⑦ Future Mkt Cap"
-          value={fmtB(v.futureMktCap.value)}
+          value={v.futureMktCap.value !== null ? fmtB(v.futureMktCap.value) : 'N/A'}
           tip={futureMktCapTip}
         />
         <div className="pt-2">
@@ -357,10 +359,14 @@ export default async function LookupPage({ params }: { params: Promise<{ ticker:
               className="text-xl font-bold"
               style={{
                 fontFamily: 'var(--font-mono)',
-                color: v.possibleReturn.value >= 0 ? 'var(--green)' : 'var(--red)',
+                color: v.possibleReturn.value === null
+                  ? 'var(--text-muted)'
+                  : v.possibleReturn.value >= 0 ? 'var(--green)' : 'var(--red)',
               }}
             >
-              {v.possibleReturn.value >= 0 ? '+' : ''}{v.possibleReturn.value.toFixed(0)}%
+              {v.possibleReturn.value !== null
+                ? `${v.possibleReturn.value >= 0 ? '+' : ''}${v.possibleReturn.value.toFixed(0)}%`
+                : 'N/A'}
             </span>
           </div>
         </div>

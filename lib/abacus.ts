@@ -1,4 +1,4 @@
-import type { FMPQuote, FMPIncomeStatement, FMPBalanceSheet, FMPPriceTarget, FMPCashFlowStatement } from './fmp';
+import type { FMPQuote, FMPIncomeStatement, FMPBalanceSheet, FMPPriceTarget, FMPCashFlowStatement, FMPAnalystEstimate } from './fmp';
 import type { Technicals } from './technicals';
 import type { PrincipleResult, ValuationSteps } from '@/types/lookup';
 
@@ -10,6 +10,20 @@ interface AbacusInput {
   quarterlyCashFlow: FMPCashFlowStatement[];  // quarterly, newest-first
   balance: FMPBalanceSheet | null;
   targets: FMPPriceTarget | null;
+  analystEstimates: FMPAnalystEstimate[];     // annual, newest-first (filtered to future in helpers)
+}
+
+// ─── Analyst estimate resolver ────────────────────────────────────────────────
+
+function resolveEstimates(estimates: FMPAnalystEstimate[]): {
+  currentYear: FMPAnalystEstimate | null;
+  nextYear: FMPAnalystEstimate | null;
+} {
+  const today = new Date().toISOString().slice(0, 10);
+  const future = estimates
+    .filter(e => e.date > today)
+    .sort((a, b) => a.date.localeCompare(b.date));
+  return { currentYear: future[0] ?? null, nextYear: future[1] ?? null };
 }
 
 // ─── TTM EPS helper ───────────────────────────────────────────────────────────
@@ -55,32 +69,35 @@ export function evaluatePrinciples(input: AbacusInput): PrincipleResult[] {
     };
   })();
 
-  // ── Principio II: Sales Growth ─────────────────────────────────────────
+  // ── Principio II: Sales Growth (forward: next FY estimate vs TTM) ────────────
   const p2 = ((): PrincipleResult => {
-    if (!latest || !prev || prev.revenue === 0) {
+    const ttmRevenue = quarterlyIncome.length >= 4
+      ? quarterlyIncome.slice(0, 4).reduce((sum, q) => sum + (q.revenue ?? 0), 0)
+      : null;
+    const { nextYear } = resolveEstimates(input.analystEstimates);
+
+    if (!nextYear || !ttmRevenue) {
       return {
         id: 2, name: 'Sales Growth', nameEs: 'Crecimiento en Ventas',
-        status: 'MANUAL', headline: 'Insufficient data', detail: 'Need ≥2 annual periods.',
+        status: 'MANUAL',
+        headline: 'No analyst coverage — manual assessment required',
+        detail: 'No analyst coverage available — manually assess forward revenue growth, or skip this principle for this stock.',
       };
     }
-    const yoy = ((latest.revenue - prev.revenue) / prev.revenue) * 100;
+
+    const forwardGrowth = ((nextYear.revenueAvg - ttmRevenue) / ttmRevenue) * 100;
     let phase: string;
     let status: PrincipleResult['status'];
-    if (yoy > 20) { phase = 'Growth-Leader'; status = 'PASS'; }
-    else if (yoy >= 5) { phase = 'Mature'; status = 'PASS'; }
-    else if (yoy >= 0) { phase = 'Slow Growth'; status = 'CAUTION'; }
-    else { phase = 'Declining'; status = 'FAIL'; }
+    if (forwardGrowth > 20)      { phase = 'Growth-Leader'; status = 'PASS'; }
+    else if (forwardGrowth >= 5) { phase = 'Mature'; status = 'PASS'; }
+    else if (forwardGrowth >= 0) { phase = 'Slow Growth'; status = 'CAUTION'; }
+    else                          { phase = 'Declining'; status = 'FAIL'; }
 
-    let cagr3yStr = '';
-    if (income[3] && income[3].revenue > 0) {
-      const cagr3y = (Math.pow(latest.revenue / income[3].revenue, 1 / 3) - 1) * 100;
-      cagr3yStr = ` | 3yr CAGR: ${cagr3y >= 0 ? '+' : ''}${cagr3y.toFixed(1)}%`;
-    }
     return {
       id: 2, name: 'Sales Growth', nameEs: 'Crecimiento en Ventas',
       status,
-      headline: `${yoy >= 0 ? '+' : ''}${yoy.toFixed(1)}% YoY — ${phase} phase`,
-      detail: `Revenue: $${(latest.revenue / 1e9).toFixed(1)}B → $${(prev.revenue / 1e9).toFixed(1)}B (prior year)${cagr3yStr}. Principio II prefers Mature or Growth-Leader phase.`,
+      headline: `${forwardGrowth >= 0 ? '+' : ''}${forwardGrowth.toFixed(1)}% forward growth — ${phase} phase`,
+      detail: `Next FY est. $${(nextYear.revenueAvg / 1e9).toFixed(1)}B vs TTM $${(ttmRevenue / 1e9).toFixed(1)}B (${nextYear.numAnalystsRevenue} analysts). Principio II prefers Mature or Growth-Leader phase.`,
     };
   })();
 
@@ -209,16 +226,8 @@ export function computeValuation(input: AbacusInput): ValuationSteps {
     : null;
   const fcfPositive = ttmFcf !== null && ttmFcf > 0;
 
-  // Step 3: Sales growth (annual — correct; revenue CAGR uses annual fiscal years)
-  const yoy = latest && prev && prev.revenue > 0
-    ? ((latest.revenue - prev.revenue) / prev.revenue) * 100
-    : 0;
-  const cagr3y =
-    income[3] && income[3].revenue > 0
-      ? (Math.pow(latest.revenue / income[3].revenue, 1 / 3) - 1) * 100
-      : null;
-  const phase =
-    yoy > 20 ? 'Growth-Leader' : yoy >= 5 ? 'Mature' : yoy >= 0 ? 'Slow Growth' : 'Declining';
+  // Step 3: Current year analyst revenue estimate (consensus avg)
+  const { currentYear: currentYearEst } = resolveEstimates(input.analystEstimates);
 
   // Step 4: Avg profit margin (4-year annual — correct for trend)
   const margins = income
@@ -229,25 +238,28 @@ export function computeValuation(input: AbacusInput): ValuationSteps {
   // Step 5: Avg P/E 6-month — use TTM EPS as denominator
   const avgPE6m = ttmEps > 0 ? technicals.avgClose6m / ttmEps : null;
 
-  // Step 6: Projected Net Income = projected revenue × avg margin
-  // Use the lower of YoY and 3yr CAGR — conservative when the two diverge.
-  const growthRate = cagr3y !== null ? Math.min(cagr3y, yoy) / 100 : yoy / 100;
-  const projectedRevenue = latest ? latest.revenue * (1 + growthRate) : 0;
-  const projectedNI = projectedRevenue * (avgMargin / 100);
+  // Step 6: Projected Net Income = current year revenue estimate × avg margin
+  const projectedRevenue = currentYearEst ? currentYearEst.revenueAvg : null;
+  const projectedNI = projectedRevenue !== null ? projectedRevenue * (avgMargin / 100) : null;
 
   // Step 7: Future Market Cap = projected NI × avg P/E
   const peForProjection = avgPE6m ?? pe ?? 20;
-  const futureMktCap = projectedNI * peForProjection;
+  const futureMktCap = projectedNI !== null ? projectedNI * peForProjection : null;
 
   // Step 8: Possible Return
   const currentMktCap = quote.marketCap;
   const possibleReturn =
-    currentMktCap > 0 ? ((futureMktCap / currentMktCap) - 1) * 100 : 0;
+    futureMktCap !== null && currentMktCap > 0
+      ? ((futureMktCap / currentMktCap) - 1) * 100
+      : null;
 
   return {
     pe: { value: pe, category: peCategory, epsSource },
     cashRunway: { months: cashRunwayMonths, debtToCapital, ttmFcf, fcfPositive },
-    salesGrowth: { yoy, cagr3y, phase },
+    salesGrowth: {
+      currentYearRevenue: currentYearEst ? currentYearEst.revenueAvg : null,
+      numAnalysts: currentYearEst?.numAnalystsRevenue ?? 0,
+    },
     avgMargin: { value: avgMargin },
     avgPE6m: {
       value: avgPE6m,

@@ -28,9 +28,9 @@ Data:
 - Principio VII (Williams %R): ${p(7)?.status} — ${p(7)?.headline}
 - RSI(14): ${a.rsi14.toFixed(0)} | EMA50: $${a.ema50.toFixed(2)}
 - Fibonacci Golden Zone (61.8–78.6%): ${a.inFibGoldenZone ? `YES — price $${a.price} is inside zone $${a.fibGoldenZoneLow.toFixed(2)}–$${a.fibGoldenZoneHigh.toFixed(2)}` : `No — zone: $${a.fibGoldenZoneLow.toFixed(2)}–$${a.fibGoldenZoneHigh.toFixed(2)}`}
-- Revenue growth YoY: ${a.revenueYoY >= 0 ? '+' : ''}${a.revenueYoY.toFixed(1)}%${a.revenueCagr3y !== null ? ` | 3yr CAGR: ${a.revenueCagr3y.toFixed(1)}%` : ''}
+- Forward revenue (current FY est.): ${a.currentYearRevenueEst !== null ? `$${(a.currentYearRevenueEst / 1e9).toFixed(1)}B` : 'N/A (no analyst coverage)'}${a.forwardGrowthRate !== null ? ` | Forward growth: ${a.forwardGrowthRate >= 0 ? '+' : ''}${a.forwardGrowthRate.toFixed(1)}%` : ''}
 - 4yr avg net margin: ${a.netMarginAvg4y.toFixed(1)}%
-- 8-step projected return: ${ret >= 0 ? '+' : ''}${ret.toFixed(0)}% (based on projected NI × avg P/E)
+- 8-step projected return: ${ret !== null ? `${ret >= 0 ? '+' : ''}${ret.toFixed(0)}%` : 'N/A (no analyst coverage)'} (based on projected NI × avg P/E)
 - Cash runway: ${a.valuation.cashRunway.months > 200 ? '>200 months (strong)' : a.valuation.cashRunway.months.toFixed(0) + ' months'} | Debt/Capital: ${a.valuation.cashRunway.debtToCapital.toFixed(1)}%
 
 Write two investment theses. Wrap each one in its XML tag exactly as shown:

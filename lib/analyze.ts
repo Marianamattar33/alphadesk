@@ -9,6 +9,7 @@ import {
   fetchPriceTargets,
   fetchEarnings,
   fetchNews,
+  fetchAnalystEstimates,
 } from './fmp';
 import { computeTechnicals } from './technicals';
 import { evaluatePrinciples, computeValuation } from './abacus';
@@ -17,7 +18,7 @@ import type { StockAnalysis } from '@/types/lookup';
 export async function analyzeTicker(ticker: string): Promise<StockAnalysis> {
   const t = ticker.toUpperCase().trim().replace(/\./g, '-'); // BRK.B → BRK-B (FMP uses hyphens)
 
-  const [quote, profile, history, income, quarterlyIncome, quarterlyCashFlow, balance, targets, earnings, newsRaw] =
+  const [quote, profile, history, income, quarterlyIncome, quarterlyCashFlow, balance, targets, earnings, newsRaw, analystEstimates] =
     await Promise.all([
       fetchQuote(t),
       fetchProfile(t),
@@ -29,13 +30,14 @@ export async function analyzeTicker(ticker: string): Promise<StockAnalysis> {
       fetchPriceTargets(t),
       fetchEarnings(t),
       fetchNews(t, 5),
+      fetchAnalystEstimates(t).catch(() => []),
     ]);
 
   if (!quote) throw new Error(`Ticker not found: ${t}`);
 
   const technicals = computeTechnicals(history, quote);
 
-  const abacusInput = { quote, technicals, income, quarterlyIncome, quarterlyCashFlow, balance, targets };
+  const abacusInput = { quote, technicals, income, quarterlyIncome, quarterlyCashFlow, balance, targets, analystEstimates };
   const principles = evaluatePrinciples(abacusInput);
   const valuation = computeValuation(abacusInput);
 
@@ -96,8 +98,14 @@ export async function analyzeTicker(ticker: string): Promise<StockAnalysis> {
 
     eps,
     trailingPE,
-    revenueYoY: valuation.salesGrowth.yoy,
-    revenueCagr3y: valuation.salesGrowth.cagr3y,
+    currentYearRevenueEst: valuation.salesGrowth.currentYearRevenue,
+    forwardGrowthRate: (() => {
+      const cur = valuation.salesGrowth.currentYearRevenue;
+      const ttmRev = quarterlyIncome.length >= 4
+        ? quarterlyIncome.slice(0, 4).reduce((s, q) => s + (q.revenue ?? 0), 0)
+        : null;
+      return cur !== null && ttmRev ? ((cur - ttmRev) / ttmRev) * 100 : null;
+    })(),
     netMarginAvg4y,
     cashRunwayMonths: valuation.cashRunway.months,
     debtToCapital: valuation.cashRunway.debtToCapital,

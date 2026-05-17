@@ -12,12 +12,12 @@ export interface PrincipleResult {
 export interface ValuationSteps {
   pe: { value: number | null; category: 'conservative' | 'sweet-spot' | 'high-risk' | 'negative' | 'na'; epsSource: 'ttm' | 'annual-fallback' };
   cashRunway: { months: number; debtToCapital: number; ttmFcf: number | null; fcfPositive: boolean };
-  salesGrowth: { yoy: number; cagr3y: number | null; phase: string };
+  salesGrowth: { currentYearRevenue: number | null; numAnalysts: number };
   avgMargin: { value: number };
   avgPE6m: { value: number | null; note: string };
-  projectedNI: { revenue: number; netIncome: number };
-  futureMktCap: { value: number };
-  possibleReturn: { value: number };
+  projectedNI: { revenue: number | null; netIncome: number | null };
+  futureMktCap: { value: number | null };
+  possibleReturn: { value: number | null };
 }
 
 export interface NewsItem {
@@ -59,8 +59,8 @@ export interface StockAnalysis {
   // Fundamentals
   eps: number;
   trailingPE: number | null;
-  revenueYoY: number;
-  revenueCagr3y: number | null;
+  currentYearRevenueEst: number | null;
+  forwardGrowthRate: number | null;
   netMarginAvg4y: number;
   cashRunwayMonths: number;
   debtToCapital: number;
