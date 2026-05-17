@@ -196,9 +196,11 @@ export function fibTip(low: number, high: number, inZone: boolean): TipContent {
   return {
     title: 'Fibonacci Golden Pocket (61.8%–65%)',
     lines: [
-      { label: 'Formula', value: '6-month swing high − range × 0.618 / 0.650' },
-      { label: 'Zone',    value: `$${high.toFixed(2)} – $${low.toFixed(2)}` },
-      { label: 'Source',  value: 'FMP /historical-price-full — highest high / lowest low, trailing 126 bars' },
+      { label: 'Upper bound', value: 'Swing high − range × 0.618' },
+      { label: 'Lower bound', value: 'Swing high − range × 0.650' },
+      { label: 'Range',       value: 'Swing high − swing low' },
+      { label: 'Zone',        value: `$${high.toFixed(2)} — $${low.toFixed(2)}` },
+      { label: 'Source',      value: 'FMP /historical-price-full — highest high / lowest low over trailing 126 trading bars (~6 months)' },
       { label: 'Note',    value: '78.6% is a separate deep retracement level, not part of the golden pocket' },
     ],
     verdicts: [
