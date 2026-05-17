@@ -339,7 +339,7 @@ export default async function LookupPage({ params }: { params: Promise<{ ticker:
           tip={avgPE6mTip(v.avgPE6m.value)}
         />
         <ValuationRow
-          label="⑥ Projected Revenue"
+          label="⑥ Projected Net Income"
           value={v.projectedNI.revenue !== null ? fmtB(v.projectedNI.revenue) : 'N/A'}
           note={v.projectedNI.netIncome !== null ? `→ NI: ${fmtB(v.projectedNI.netIncome)}` : undefined}
           tip={projectedNITip(v.projectedNI.revenue, v.projectedNI.netIncome)}

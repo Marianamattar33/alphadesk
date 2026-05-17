@@ -389,7 +389,7 @@ export function avgPE6mTip(val: number | null): TipContent {
 
 export function projectedNITip(revenue: number | null, ni: number | null): TipContent {
   return {
-    title: '⑥ Projected Revenue & Net Income',
+    title: '⑥ Projected Net Income',
     lines: [
       { label: 'Revenue',  value: 'Current year analyst revenue estimate avg (step ③)' },
       { label: 'Net Inc.', value: 'Current year revenue estimate × 4-year avg net margin (step ④)' },
