@@ -416,7 +416,8 @@ export const futureMktCapTip: TipContent = {
   lines: [
     { label: 'Formula', value: 'Projected net income (step ⑥) × avg P/E 6-month (step ⑤)' },
     { label: 'Purpose', value: 'Estimates what the market might value the company at in ~1 year' },
-    { label: 'Note',    value: 'Model estimate only — not a price target' },
+    { label: 'Note',       value: 'Model estimate only — not a price target' },
+    { label: 'Limitation', value: 'Assumes the market continues to value the company at its trailing 6-month average multiple. In practice, multiples expand or contract with interest rates, sentiment, and growth re-rating — a real-world driver of return that lives outside this model.' },
   ],
 };
 
